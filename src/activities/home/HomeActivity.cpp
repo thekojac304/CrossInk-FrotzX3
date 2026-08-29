@@ -25,6 +25,7 @@
 #include "../reader/EpubReaderUtils.h"
 #include "BookmarkStore.h"
 #include "ClippingStore.h"
+#include "InteractiveFictionActivity.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
@@ -57,6 +58,7 @@ enum class HomeMenuAction {
   OpdsBrowser,
   ReadingStats,
   Bookmarks,
+  InteractiveFiction,
   FileTransfer,
   Settings,
 };
@@ -68,7 +70,7 @@ struct HomeMenuEntry {
 };
 
 struct HomeMenuEntries {
-  static constexpr int kCapacity = 8;
+  static constexpr int kCapacity = 9;
   std::array<HomeMenuEntry, kCapacity> entries{};
   int count = 0;
 
@@ -274,6 +276,7 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
     items.push({savedItemsLabel(hasBookmarks, hasClippings), BookmarkIcon, HomeMenuAction::Bookmarks});
   }
 
+  items.push({"FrotzX3", Book, HomeMenuAction::InteractiveFiction});
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
   items.push({tr(STR_SETTINGS_TITLE), Settings, HomeMenuAction::Settings});
 }
@@ -298,6 +301,7 @@ HomeMenuEntries buildMinimalMenuItems(bool hasOpdsServers, bool hasReadingStats,
     items.push({tr(STR_READING_STATS), Chart, HomeMenuAction::ReadingStats});
   }
 
+  items.push({"FrotzX3", Book, HomeMenuAction::InteractiveFiction});
   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
   return items;
 }
@@ -593,7 +597,7 @@ static_assert(HomeActivity::kMaxCachedBooks >= LyraCarouselMetrics::values.homeR
 
 int HomeActivity::getMenuItemCount() const {
   const auto& metrics = UITheme::getInstance().getMetrics();
-  int count = 4;  // File Browser, Recents, File transfer, Settings
+  int count = 5;  // File Browser, Recents, Interactive Fiction, File transfer, Settings
   if (!metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
     count += getVisibleRecentBookCount();
   } else if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
@@ -1655,6 +1659,10 @@ void HomeActivity::loop() {
       case HomeMenuAction::Bookmarks:
         onSavedItemsOpen();
         break;
+      case HomeMenuAction::InteractiveFiction:
+        activityManager.pushActivity(
+            std::make_unique<InteractiveFictionActivity>(renderer, mappedInput));
+        break;  
       case HomeMenuAction::FileTransfer:
         onFileTransferOpen();
         break;

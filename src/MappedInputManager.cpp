@@ -606,16 +606,46 @@ bool MappedInputManager::wasPressed(const Button button) const {
 
   if (button == Button::Confirm) {
     if (mapButton(button, &HalGPIO::wasPressed)) {
+
+      /*
+       * Some supported hardware exposes the same physical control as
+       * Confirm while held, then emits a Power release when it comes up.
+       *
+       * main.cpp checks the global Power action BEFORE the active
+       * Activity gets its loop() on the release frame. Without arming
+       * suppression here, a button press that was already consumed as
+       * Confirm can therefore also trigger Sleep on release.
+       *
+       * Arm the Power-release suppression as soon as the Confirm press
+       * is accepted. On hardware where Confirm and Power are separate,
+       * the normal Confirm release below clears this flag again, so it
+       * cannot suppress some unrelated later Power press.
+       */
+      suppressPowerRelease = true;
+
       return true;
     }
+
     if (wasFrontButtonHintTouchedDown(mappedFrontButtonFor(button))) {
       return true;
     }
 
-    return shouldUsePowerAsConfirmFallback() &&
-           !isPowerButtonActionAvailableOutsideReader(
-               static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn)) &&
-           gpio.wasPressed(HalGPIO::BTN_POWER);
+    const bool powerFallback =
+        shouldUsePowerAsConfirmFallback() &&
+        !isPowerButtonActionAvailableOutsideReader(
+            static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn)) &&
+        gpio.wasPressed(HalGPIO::BTN_POWER);
+
+    if (powerFallback) {
+
+      /*
+       * Raw Power is explicitly being used as Confirm on this screen.
+       * Consume its later global Power release as well.
+       */
+      suppressPowerRelease = true;
+    }
+
+    return powerFallback;
   }
 
   if (button == Button::Back && wasBackGesture()) {
@@ -659,6 +689,18 @@ bool MappedInputManager::wasReleased(const Button button) const {
 
   if (button == Button::Confirm) {
     if (mapButton(button, &HalGPIO::wasReleased) || wasFrontButtonHintTapped(mappedFrontButtonFor(button))) {
+
+      /*
+       * If this was an ordinary dedicated Confirm button, no matching
+       * Power release occurred and the global handler therefore did not
+       * consume suppressPowerRelease. Clear it now so a later unrelated
+       * Power press is never swallowed.
+       *
+       * On shared Confirm/Power hardware, main.cpp's earlier Power-release
+       * check already consumed and cleared this flag before Activity::loop().
+       */
+      suppressPowerRelease = false;
+
       if (suppressConfirmRelease) {
         suppressConfirmRelease = false;
         return false;
@@ -711,6 +753,27 @@ bool MappedInputManager::isPressed(const Button button) const {
     return true;
   }
 #endif
+
+  /*
+   * If this physical press has already been accepted as Confirm,
+   * hide the matching Power hold from the global power handler too.
+   *
+   * suppressPowerRelease was originally added to swallow the eventual
+   * Power release on shared Confirm/Power hardware.  main.cpp can also
+   * trigger a configured long-press Power action while the button is
+   * still DOWN, before that release ever occurs.  Returning false here
+   * prevents a slightly long Select press from becoming Sleep (or any
+   * other global long-Power action) after the Activity has consumed it
+   * as Confirm.
+   *
+   * The release path still sees the raw Power release and clears
+   * suppressPowerRelease exactly as before.
+   */
+  if (button == Button::Power &&
+      suppressPowerRelease) {
+
+    return false;
+  }
 
   if (button == Button::Confirm) {
     if (mapButton(button, &HalGPIO::isPressed)) {
