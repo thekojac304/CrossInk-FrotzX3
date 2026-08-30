@@ -536,6 +536,300 @@ static void crossink_debug_object_subtree(
 }
 
 
+
+static int crossink_collect_room_object_names(
+    zword object,
+    int depth,
+    int max_depth,
+    char *names,
+    int max_objects,
+    int name_size,
+    int count)
+{
+    zword child;
+
+    if (object == 0 ||
+        depth > max_depth ||
+        names == NULL ||
+        max_objects <= 0 ||
+        name_size <= 1 ||
+        count >= max_objects) {
+
+        return count;
+    }
+
+    child =
+        crossink_object_child(object);
+
+    while (child != 0 &&
+           count < max_objects) {
+
+        char name[96];
+
+        if (frotz_get_object_short_name(
+                child,
+                name,
+                sizeof(name)) &&
+            name[0] != '\0') {
+
+            char *slot =
+                names +
+                (count * name_size);
+
+            snprintf(
+                slot,
+                name_size,
+                "%s",
+                name);
+
+            slot[name_size - 1] = '\0';
+
+            count++;
+        }
+
+        if (depth < max_depth &&
+            count < max_objects) {
+
+            count =
+                crossink_collect_room_object_names(
+                    child,
+                    depth + 1,
+                    max_depth,
+                    names,
+                    max_objects,
+                    name_size,
+                    count);
+        }
+
+        child =
+            crossink_object_sibling(child);
+    }
+
+    return count;
+}
+
+
+
+/*
+ * frotz_find_room_name
+ *
+ * Find an object short name that appears as an entire visible output line.
+ *
+ * This intentionally avoids the old "name contained somewhere in the first
+ * line" fallback. That fallback can mistake ordinary prose such as
+ * "Opening the small mailbox reveals..." for a room change.
+ *
+ * Exact full-line matching is conservative but works well for normal
+ * Z-machine room headings, including headings that occur after preceding
+ * narrative text in the same captured turn.
+ */
+int frotz_find_room_name(
+    const char *visible_text,
+    char *room_name,
+    int room_name_size)
+{
+    const int count =
+        crossink_object_count();
+
+    const char *p;
+
+    if (room_name == NULL ||
+        room_name_size <= 1) {
+
+        return FALSE;
+    }
+
+    room_name[0] = '\0';
+
+    if (visible_text == NULL ||
+        visible_text[0] == '\0') {
+
+        return FALSE;
+    }
+
+    p = visible_text;
+
+    while (*p != '\0') {
+
+        char line[96];
+        int out = 0;
+        int object;
+
+        while (*p == '\r' ||
+               *p == '\n') {
+
+            p++;
+        }
+
+        while (*p == ' ' ||
+               *p == '\t') {
+
+            p++;
+        }
+
+        while (*p != '\0' &&
+               *p != '\r' &&
+               *p != '\n' &&
+               out < (int)sizeof(line) - 1) {
+
+            line[out++] = *p++;
+        }
+
+        while (out > 0 &&
+               (line[out - 1] == ' ' ||
+                line[out - 1] == '\t')) {
+
+            out--;
+        }
+
+        line[out] = '\0';
+
+        while (*p != '\0' &&
+               *p != '\r' &&
+               *p != '\n') {
+
+            p++;
+        }
+
+        if (line[0] == '\0') {
+            continue;
+        }
+
+        for (object = 1;
+             object <= count;
+             ++object) {
+
+            char name[96];
+
+            if (!frotz_get_object_short_name(
+                    (zword)object,
+                    name,
+                    sizeof(name))) {
+
+                continue;
+            }
+
+            if (!crossink_strings_equal_ignore_case(
+                    name,
+                    line)) {
+
+                continue;
+            }
+
+            snprintf(
+                room_name,
+                room_name_size,
+                "%s",
+                name);
+
+            room_name[room_name_size - 1] =
+                '\0';
+
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+
+/*
+ * frotz_get_room_object_names
+ *
+ * Structured counterpart to the existing room-tree diagnostic.
+ *
+ * The caller supplies fixed-width storage. No heap allocation is
+ * performed here.
+ *
+ * Room identification deliberately uses the same heuristic as
+ * frotz_debug_room_tree(): the first visible output line is matched
+ * against real Z-machine object short names.
+ */
+int frotz_get_room_object_names(
+    const char *visible_text,
+    char *names,
+    int max_objects,
+    int name_size)
+{
+    const int count =
+        crossink_object_count();
+
+    char room_title[96];
+
+    int object;
+    int room_object = 0;
+
+    if (visible_text == NULL ||
+        names == NULL ||
+        max_objects <= 0 ||
+        name_size <= 1) {
+
+        return 0;
+    }
+
+    for (object = 0;
+         object < max_objects;
+         ++object) {
+
+        names[object * name_size] =
+            '\0';
+    }
+
+    crossink_extract_first_line(
+        visible_text,
+        room_title,
+        sizeof(room_title));
+
+    if (room_title[0] == '\0') {
+        return 0;
+    }
+
+    /*
+     * First preference: exact short-name match.
+     */
+    for (object = 1;
+         object <= count;
+         ++object) {
+
+        char name[96];
+
+        if (!frotz_get_object_short_name(
+                (zword)object,
+                name,
+                sizeof(name))) {
+
+            continue;
+        }
+
+        if (crossink_strings_equal_ignore_case(
+                name,
+                room_title)) {
+
+            room_object = object;
+            break;
+        }
+    }
+
+    if (room_object == 0) {
+        return 0;
+    }
+
+    /*
+     * Match the existing room-tree diagnostic depth:
+     * direct room contents plus objects contained by those objects.
+     */
+    return
+        crossink_collect_room_object_names(
+            (zword)room_object,
+            1,
+            2,
+            names,
+            max_objects,
+            name_size,
+            0);
+}
+
+
 /*
  * frotz_debug_room_tree
  *

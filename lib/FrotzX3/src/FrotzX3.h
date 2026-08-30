@@ -56,6 +56,33 @@ bool saveResume();
 
 bool isDictionaryWord(const char* word);
 
+/*
+ * Return real Z-machine short names for objects in the currently
+ * inferred room.
+ *
+ * `names` points to maxObjects consecutive slots, each exactly
+ * nameSize bytes wide. The function returns the number of filled
+ * slots. It returns 0 unless Frotz is safely waiting for input.
+ *
+ * This is intentionally caller-owned fixed storage: no vector,
+ * string, or per-object heap allocation is used.
+ */
+/*
+ * Find a real Z-machine object short name that appears as an entire
+ * visible output line. Used by the UI as a conservative room-heading
+ * detector. Returns false unless Frotz is safely waiting for input.
+ */
+bool getCurrentRoomName(
+    const char* visibleText,
+    char* roomName,
+    int roomNameSize);
+
+int getCurrentRoomObjects(
+    const char* visibleText,
+    char* names,
+    int maxObjects,
+    int nameSize);
+
 const char* output();
 
 const char* lastError();

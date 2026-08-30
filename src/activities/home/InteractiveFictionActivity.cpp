@@ -172,8 +172,61 @@ static bool gBackLongPressHandled = false;
 constexpr unsigned long TRANSCRIPT_LONG_PRESS_MS = 600;
 constexpr unsigned long GAME_MENU_LONG_PRESS_MS = 600;
 
-static constexpr int MAX_CONTEXT_OBJECTS = 16;
+/*
+ * Context-menu candidate storage.
+ *
+ * Phase 2 raises the transcript/dictionary candidate cap from 16 to 32
+ * so the paging code can actually be exercised before the future live
+ * object API is merged into these menus.
+ *
+ * Extra RAM versus the old 16-entry cache:
+ *   16 additional entries x 32 bytes = 512 bytes.
+ */
+static constexpr int MAX_CONTEXT_OBJECTS = 32;
 static constexpr int MAX_CONTEXT_OBJECT_LENGTH = 32;
+
+/*
+ * The e-ink action grid has 9 rows x 2 columns available for contextual
+ * menu entries. Keep paging tied to that physical layout rather than to
+ * the candidate-cache size.
+ */
+static constexpr int CONTEXT_MENU_ITEMS_PER_PAGE = 18;
+
+/*
+ * Raw real-Z-machine room tree cache.
+ *
+ * The object API can identify a room when the visible output begins with
+ * a room title (LOOK, movement, startup descriptions, etc.). We retain
+ * that bounded result across ordinary turns so later text such as
+ * "Opening the mailbox reveals a leaflet" can safely expose an object
+ * that was already present in the tree without requiring the response
+ * itself to begin with a room title.
+ *
+ * 24 x 32 bytes = 768 bytes.
+ */
+static constexpr int MAX_LIVE_ROOM_OBJECTS = 24;
+static constexpr int MAX_LIVE_ROOM_OBJECT_LENGTH = 32;
+
+static char gLiveRoomObjects
+    [MAX_LIVE_ROOM_OBJECTS]
+    [MAX_LIVE_ROOM_OBJECT_LENGTH] = {};
+
+static int gLiveRoomObjectCount = 0;
+
+static char gCurrentRoomName[96] = {};
+
+enum class ContextAction {
+  Take,
+  Drop,
+  Examine,
+  Open,
+  Read
+};
+
+static ContextAction gContextAction =
+    ContextAction::Examine;
+
+static constexpr int MAX_CONTEXT_DISPLAY_CHARS = 16;
 
 static constexpr int MAX_DICTIONARY_CACHE = 128;
 static constexpr int MAX_DICTIONARY_WORD_LENGTH = 24;
@@ -192,7 +245,26 @@ static char gContextObjects
     [MAX_CONTEXT_OBJECTS]
     [MAX_CONTEXT_OBJECT_LENGTH] = {};
 
+/*
+ * Command phrase paired with each visible label.
+ *
+ * For transcript-only candidates this is normally identical to the
+ * display label. Real Z-machine short names may use a different parser
+ * noun (for example display "Ensign First Class", command "BLATHER").
+ */
+static char gContextObjectCommands
+    [MAX_CONTEXT_OBJECTS]
+    [MAX_CONTEXT_OBJECT_LENGTH] = {};
+
 static int gContextObjectCount = 0;
+
+/*
+ * The first entries in the context list are confirmed/exposed real
+ * Z-machine objects. Transcript/dictionary-only candidates follow.
+ *
+ * This affects ordering only. It does NOT decide what verbs are valid.
+ */
+static int gRealContextObjectCount = 0;
 
 static constexpr int MAX_INVENTORY_OBJECTS = 16;
 
@@ -1748,6 +1820,160 @@ bool containsTextIgnoreCase(
 
   return false;
 }
+bool stringsEqualIgnoreCase(
+    const char* a,
+    const char* b) {
+
+  if (a == nullptr ||
+      b == nullptr) {
+
+    return false;
+  }
+
+  while (*a != '\0' &&
+         *b != '\0') {
+
+    if (toUpperAscii(*a) !=
+        toUpperAscii(*b)) {
+
+      return false;
+    }
+
+    ++a;
+    ++b;
+  }
+
+  return
+      *a == '\0' &&
+      *b == '\0';
+}
+
+
+bool isSingleContextWord(
+    const char* text) {
+
+  if (text == nullptr ||
+      text[0] == '\0') {
+
+    return false;
+  }
+
+  for (const char* p = text;
+       *p != '\0';
+       ++p) {
+
+    if (*p == ' ' ||
+        *p == '-' ||
+        *p == '\t') {
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+bool containsWholeWordIgnoreCase(
+    const char* text,
+    const char* word) {
+
+  if (text == nullptr ||
+      word == nullptr ||
+      word[0] == '\0') {
+
+    return false;
+  }
+
+  const size_t wordLength =
+      strlen(word);
+
+  for (const char* p = text;
+       *p != '\0';
+       ++p) {
+
+    if (p != text &&
+        isAsciiLetter(p[-1])) {
+
+      continue;
+    }
+
+    size_t i = 0;
+
+    while (i < wordLength &&
+           p[i] != '\0' &&
+           toUpperAscii(p[i]) ==
+               toUpperAscii(word[i])) {
+
+      ++i;
+    }
+
+    if (i == wordLength &&
+        !isAsciiLetter(p[i])) {
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+void formatContextDisplayName(
+    const char* source,
+    char* destination,
+    size_t destinationSize) {
+
+  if (destination == nullptr ||
+      destinationSize == 0) {
+
+    return;
+  }
+
+  destination[0] = '\0';
+
+  if (source == nullptr) {
+    return;
+  }
+
+  char upper[64] = {};
+  size_t length = 0;
+
+  while (source[length] != '\0' &&
+         length < sizeof(upper) - 1) {
+
+    upper[length] =
+        toUpperAscii(source[length]);
+
+    ++length;
+  }
+
+  upper[length] = '\0';
+
+  if (length <=
+      MAX_CONTEXT_DISPLAY_CHARS) {
+
+    snprintf(
+        destination,
+        destinationSize,
+        "%s",
+        upper);
+
+    return;
+  }
+
+  const int prefixLength =
+      MAX_CONTEXT_DISPLAY_CHARS - 3;
+
+  snprintf(
+      destination,
+      destinationSize,
+      "%.*s...",
+      prefixLength,
+      upper);
+}
+
+
 bool isContextArticle(const char* word) {
 
   return
@@ -1909,13 +2135,40 @@ bool isDictionaryWordCached(
 bool contextObjectAlreadyExists(
     const char* object) {
 
+  if (object == nullptr ||
+      object[0] == '\0') {
+
+    return true;
+  }
+
   for (int i = 0;
        i < gContextObjectCount;
        ++i) {
 
-    if (strcmp(
+    /*
+     * Exact duplicate, ignoring display capitalization.
+     */
+    if (stringsEqualIgnoreCase(
             gContextObjects[i],
-            object) == 0) {
+            object)) {
+
+      return true;
+    }
+
+    /*
+     * If the real object API already supplied a useful multi-word
+     * short name such as "small mailbox", suppress transcript-only
+     * fragments such as SMALL and MAILBOX.
+     *
+     * Do not perform the reverse replacement here. Real object names
+     * are intentionally added before transcript dictionary tokens.
+     */
+    if (isSingleContextWord(object) &&
+        !isSingleContextWord(
+            gContextObjects[i]) &&
+        containsWholeWordIgnoreCase(
+            gContextObjects[i],
+            object)) {
 
       return true;
     }
@@ -1924,9 +2177,11 @@ bool contextObjectAlreadyExists(
   return false;
 }
 
-void resetContextObjects() {
+void clearContextCandidates() {
 
   gContextObjectCount = 0;
+  gRealContextObjectCount = 0;
+  gLiveRoomObjectCount = 0;
 
   for (int i = 0;
        i < MAX_CONTEXT_OBJECTS;
@@ -1934,8 +2189,227 @@ void resetContextObjects() {
 
     gContextObjects[i][0] =
         '\0';
+
+    gContextObjectCommands[i][0] =
+        '\0';
+  }
+
+  for (int i = 0;
+       i < MAX_LIVE_ROOM_OBJECTS;
+       ++i) {
+
+    gLiveRoomObjects[i][0] =
+        '\0';
   }
 }
+
+
+void resetContextObjects() {
+
+  clearContextCandidates();
+
+  gCurrentRoomName[0] =
+      '\0';
+}
+
+bool contextDisplayMatchesInventory(
+    const char* contextDisplay) {
+
+  if (contextDisplay == nullptr ||
+      contextDisplay[0] == '\0') {
+
+    return false;
+  }
+
+  for (int i = 0;
+       i < gInventoryObjectCount;
+       ++i) {
+
+    if (stringsEqualIgnoreCase(
+            contextDisplay,
+            gInventoryObjects[i])) {
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+int dropContextExtraCount() {
+
+  int count = 0;
+
+  for (int i = 0;
+       i < gContextObjectCount;
+       ++i) {
+
+    if (!contextDisplayMatchesInventory(
+            gContextObjects[i])) {
+
+      ++count;
+    }
+  }
+
+  return count;
+}
+
+
+int contextMenuObjectCount() {
+
+  if (gContextAction ==
+      ContextAction::Drop) {
+
+    return
+        gInventoryObjectCount +
+        dropContextExtraCount();
+  }
+
+  return gContextObjectCount;
+}
+
+
+const char* contextMenuDisplayAt(
+    int index) {
+
+  if (index < 0) {
+    return nullptr;
+  }
+
+  if (gContextAction !=
+      ContextAction::Drop) {
+
+    if (index >=
+        gContextObjectCount) {
+
+      return nullptr;
+    }
+
+    return
+        gContextObjects[index];
+  }
+
+  /*
+   * DROP: carried items first.
+   */
+  if (index <
+      gInventoryObjectCount) {
+
+    return
+        gInventoryObjects[index];
+  }
+
+  int remaining =
+      index -
+      gInventoryObjectCount;
+
+  for (int i = 0;
+       i < gContextObjectCount;
+       ++i) {
+
+    if (contextDisplayMatchesInventory(
+            gContextObjects[i])) {
+
+      continue;
+    }
+
+    if (remaining == 0) {
+      return gContextObjects[i];
+    }
+
+    --remaining;
+  }
+
+  return nullptr;
+}
+
+
+const char* contextMenuCommandAt(
+    int index) {
+
+  if (index < 0) {
+    return nullptr;
+  }
+
+  if (gContextAction !=
+      ContextAction::Drop) {
+
+    if (index >=
+        gContextObjectCount) {
+
+      return nullptr;
+    }
+
+    return
+        gContextObjectCommands[index];
+  }
+
+  if (index <
+      gInventoryObjectCount) {
+
+    return
+        gInventoryObjects[index];
+  }
+
+  int remaining =
+      index -
+      gInventoryObjectCount;
+
+  for (int i = 0;
+       i < gContextObjectCount;
+       ++i) {
+
+    if (contextDisplayMatchesInventory(
+            gContextObjects[i])) {
+
+      continue;
+    }
+
+    if (remaining == 0) {
+      return gContextObjectCommands[i];
+    }
+
+    --remaining;
+  }
+
+  return nullptr;
+}
+
+
+int contextMenuItemCount() {
+
+  /*
+   * Every contextual-object submenu has one final TYPE... entry.
+   */
+  return contextMenuObjectCount() + 1;
+}
+
+
+int contextMenuPageCount() {
+
+  const int itemCount =
+      contextMenuItemCount();
+
+  return
+      (itemCount +
+       CONTEXT_MENU_ITEMS_PER_PAGE - 1) /
+          CONTEXT_MENU_ITEMS_PER_PAGE;
+}
+
+
+int contextMenuPageForSelection(
+    int selectionIndex) {
+
+  if (selectionIndex < 0) {
+    return 0;
+  }
+
+  return
+      selectionIndex /
+      CONTEXT_MENU_ITEMS_PER_PAGE;
+}
+
 
 bool inventoryObjectAlreadyExists(
     const char* object) {
@@ -2010,6 +2484,42 @@ void addInventoryObject(
 
   ++gInventoryObjectCount;
 }
+
+bool isTranscriptContextNoiseWord(
+    const char* word) {
+
+  /*
+   * Deliberately tiny and conservative.
+   *
+   * These are banner/control words that can exist in a story dictionary
+   * but are poor current-scene object candidates. Do not turn this into
+   * broad semantic filtering; odd scenery nouns remain fair game.
+   */
+  static const char* noiseWords[] = {
+      "RELEASE",
+      "VERSION",
+      "COPYRIGHT"
+  };
+
+  constexpr int noiseWordCount =
+      sizeof(noiseWords) /
+      sizeof(noiseWords[0]);
+
+  for (int i = 0;
+       i < noiseWordCount;
+       ++i) {
+
+    if (strcmp(
+            word,
+            noiseWords[i]) == 0) {
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 bool isInventoryNoiseWord(
     const char* word) {
@@ -2101,12 +2611,471 @@ void detectInventoryObjects(
 }
 
 void addContextObject(
+    const char* object,
+    const char* command = nullptr);
+
+void addRealContextObject(
+    const char* object,
+    const char* command);
+
+void refreshLiveRoomObjectCache(
+    const char* roomName) {
+
+  if (roomName == nullptr ||
+      roomName[0] == '\0') {
+
+    return;
+  }
+
+  char refreshedObjects
+      [MAX_LIVE_ROOM_OBJECTS]
+      [MAX_LIVE_ROOM_OBJECT_LENGTH] = {};
+
+  const int refreshedCount =
+      FrotzX3::getCurrentRoomObjects(
+          roomName,
+          &refreshedObjects[0][0],
+          MAX_LIVE_ROOM_OBJECTS,
+          MAX_LIVE_ROOM_OBJECT_LENGTH);
+
+  gLiveRoomObjectCount =
+      refreshedCount;
+
+  for (int i = 0;
+       i < MAX_LIVE_ROOM_OBJECTS;
+       ++i) {
+
+    gLiveRoomObjects[i][0] =
+        '\0';
+  }
+
+  for (int i = 0;
+       i < refreshedCount;
+       ++i) {
+
+    snprintf(
+        gLiveRoomObjects[i],
+        MAX_LIVE_ROOM_OBJECT_LENGTH,
+        "%s",
+        refreshedObjects[i]);
+  }
+
+  LOG_INF(
+      "FROTZLIVE",
+      "room=\"%s\" cached %d raw room-tree object(s)",
+      roomName,
+      gLiveRoomObjectCount);
+}
+
+
+void copyLastWordUpper(
+    const char* text,
+    char* destination,
+    size_t destinationSize) {
+
+  if (destination == nullptr ||
+      destinationSize == 0) {
+
+    return;
+  }
+
+  destination[0] = '\0';
+
+  if (text == nullptr) {
+    return;
+  }
+
+  const char* lastWord = nullptr;
+
+  for (const char* p = text;
+       *p != '\0';
+       ++p) {
+
+    if (isAsciiLetter(*p) &&
+        (p == text ||
+         !isAsciiLetter(p[-1]))) {
+
+      lastWord = p;
+    }
+  }
+
+  if (lastWord == nullptr) {
+    return;
+  }
+
+  size_t out = 0;
+
+  while (isAsciiLetter(*lastWord) &&
+         out < destinationSize - 1) {
+
+    destination[out++] =
+        toUpperAscii(*lastWord++);
+  }
+
+  destination[out] = '\0';
+}
+
+
+bool findFollowingCapitalizedWord(
+    const char* visibleText,
+    const char* objectName,
+    char* destination,
+    size_t destinationSize) {
+
+  if (visibleText == nullptr ||
+      objectName == nullptr ||
+      destination == nullptr ||
+      destinationSize == 0) {
+
+    return false;
+  }
+
+  destination[0] = '\0';
+
+  const size_t objectLength =
+      strlen(objectName);
+
+  for (const char* p = visibleText;
+       *p != '\0';
+       ++p) {
+
+    size_t i = 0;
+
+    while (i < objectLength &&
+           p[i] != '\0' &&
+           toUpperAscii(p[i]) ==
+               toUpperAscii(objectName[i])) {
+
+      ++i;
+    }
+
+    if (i != objectLength) {
+      continue;
+    }
+
+    const char* q =
+        p + objectLength;
+
+    while (*q == ' ' ||
+           *q == '\t') {
+
+      ++q;
+    }
+
+    /*
+     * A capitalized word immediately following a real short name is
+     * often the parser-facing proper noun omitted from that short name.
+     *
+     * Planetfall example:
+     *   "Ensign First Class Blather ..."
+     *                       ^^^^^^^
+     */
+    if (!(*q >= 'A' && *q <= 'Z')) {
+      continue;
+    }
+
+    size_t out = 0;
+
+    while (isAsciiLetter(*q) &&
+           out < destinationSize - 1) {
+
+      destination[out++] =
+          toUpperAscii(*q++);
+    }
+
+    destination[out] = '\0';
+
+    return out > 0;
+  }
+
+  return false;
+}
+
+
+void chooseRealObjectCommandName(
+    const char* visibleText,
+    const char* objectName,
+    char* destination,
+    size_t destinationSize) {
+
+  if (findFollowingCapitalizedWord(
+          visibleText,
+          objectName,
+          destination,
+          destinationSize)) {
+
+    return;
+  }
+
+  /*
+   * Generic fallback: use the final word of the object's short name.
+   * This turns "small mailbox" into "MAILBOX" and "Patrol uniform"
+   * into "UNIFORM", which is generally much safer for parser input
+   * than submitting the full display phrase.
+   */
+  copyLastWordUpper(
+      objectName,
+      destination,
+      destinationSize);
+}
+
+
+void exposeVisibleLiveObjects(
+    const char* visibleText) {
+
+  if (visibleText == nullptr ||
+      visibleText[0] == '\0') {
+
+    return;
+  }
+
+  for (int i = 0;
+       i < gLiveRoomObjectCount;
+       ++i) {
+
+    const char* object =
+        gLiveRoomObjects[i];
+
+    if (object[0] == '\0') {
+      continue;
+    }
+
+    /*
+     * Conservative visibility rule:
+     *
+     * A real object-tree entry becomes a UI candidate only after the
+     * game has actually printed its short name to the player.
+     *
+     * This keeps hidden descendants such as Zork's leaflet out of the
+     * menu while the mailbox is closed, yet promotes the leaflet as
+     * soon as OPEN MAILBOX reveals it in visible text.
+     *
+     * It also naturally filters internal/player objects such as
+     * "player" or Zork's "cretin" unless the story explicitly exposes
+     * that name.
+     */
+    if (!containsTextIgnoreCase(
+            visibleText,
+            object)) {
+
+      continue;
+    }
+
+    char commandName[
+        MAX_CONTEXT_OBJECT_LENGTH] = {};
+
+    chooseRealObjectCommandName(
+        visibleText,
+        object,
+        commandName,
+        sizeof(commandName));
+
+    LOG_INF(
+        "FROTZLIVE",
+        "exposed real object: display=\"%s\" command=\"%s\"",
+        object,
+        commandName);
+
+    addRealContextObject(
+        object,
+        commandName);
+  }
+}
+
+
+int findContextObjectExactIndex(
     const char* object) {
 
   if (object == nullptr ||
       object[0] == '\0') {
 
+    return -1;
+  }
+
+  for (int i = 0;
+       i < gContextObjectCount;
+       ++i) {
+
+    if (stringsEqualIgnoreCase(
+            gContextObjects[i],
+            object)) {
+
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+
+void addRealContextObject(
+    const char* object,
+    const char* command) {
+
+  if (object == nullptr ||
+      object[0] == '\0') {
+
     return;
+  }
+
+  if (command == nullptr ||
+      command[0] == '\0') {
+
+    command = object;
+  }
+
+  const int existingIndex =
+      findContextObjectExactIndex(
+          object);
+
+  if (existingIndex >= 0) {
+
+    /*
+     * Already in the confirmed-real prefix: just refresh the parser
+     * command pairing.
+     */
+    if (existingIndex <
+        gRealContextObjectCount) {
+
+      snprintf(
+          gContextObjectCommands[
+              existingIndex],
+          MAX_CONTEXT_OBJECT_LENGTH,
+          "%s",
+          command);
+
+      return;
+    }
+
+    /*
+     * It was previously learned only from transcript text.
+     * Promote that exact entry into the real-object prefix.
+     */
+    char savedDisplay[
+        MAX_CONTEXT_OBJECT_LENGTH] = {};
+
+    char savedCommand[
+        MAX_CONTEXT_OBJECT_LENGTH] = {};
+
+    snprintf(
+        savedDisplay,
+        sizeof(savedDisplay),
+        "%s",
+        gContextObjects[
+            existingIndex]);
+
+    snprintf(
+        savedCommand,
+        sizeof(savedCommand),
+        "%s",
+        command);
+
+    for (int i = existingIndex;
+         i > gRealContextObjectCount;
+         --i) {
+
+      snprintf(
+          gContextObjects[i],
+          MAX_CONTEXT_OBJECT_LENGTH,
+          "%s",
+          gContextObjects[i - 1]);
+
+      snprintf(
+          gContextObjectCommands[i],
+          MAX_CONTEXT_OBJECT_LENGTH,
+          "%s",
+          gContextObjectCommands[i - 1]);
+    }
+
+    snprintf(
+        gContextObjects[
+            gRealContextObjectCount],
+        MAX_CONTEXT_OBJECT_LENGTH,
+        "%s",
+        savedDisplay);
+
+    snprintf(
+        gContextObjectCommands[
+            gRealContextObjectCount],
+        MAX_CONTEXT_OBJECT_LENGTH,
+        "%s",
+        savedCommand);
+
+    ++gRealContextObjectCount;
+    return;
+  }
+
+  /*
+   * Preserve a bounded list. If full, drop one transcript-only entry;
+   * never grow the buffer and never evict a confirmed real object merely
+   * to insert another dictionary token.
+   */
+  if (gContextObjectCount >=
+      MAX_CONTEXT_OBJECTS) {
+
+    if (gRealContextObjectCount >=
+        gContextObjectCount) {
+
+      return;
+    }
+
+    --gContextObjectCount;
+  }
+
+  /*
+   * Insert directly after the existing real-object prefix, shifting
+   * transcript-only candidates right.
+   */
+  for (int i = gContextObjectCount;
+       i > gRealContextObjectCount;
+       --i) {
+
+    snprintf(
+        gContextObjects[i],
+        MAX_CONTEXT_OBJECT_LENGTH,
+        "%s",
+        gContextObjects[i - 1]);
+
+    snprintf(
+        gContextObjectCommands[i],
+        MAX_CONTEXT_OBJECT_LENGTH,
+        "%s",
+        gContextObjectCommands[i - 1]);
+  }
+
+  snprintf(
+      gContextObjects[
+          gRealContextObjectCount],
+      MAX_CONTEXT_OBJECT_LENGTH,
+      "%s",
+      object);
+
+  snprintf(
+      gContextObjectCommands[
+          gRealContextObjectCount],
+      MAX_CONTEXT_OBJECT_LENGTH,
+      "%s",
+      command);
+
+  ++gRealContextObjectCount;
+  ++gContextObjectCount;
+}
+
+
+void addContextObject(
+    const char* object,
+    const char* command) {
+
+  if (object == nullptr ||
+      object[0] == '\0') {
+
+    return;
+  }
+
+  if (command == nullptr ||
+      command[0] == '\0') {
+
+    command = object;
   }
 
   if (contextObjectAlreadyExists(
@@ -2116,14 +3085,19 @@ void addContextObject(
   }
 
   /*
-   * If the cache is full, discard the oldest observed word
-   * so newer room-description vocabulary can replace startup
-   * banner vocabulary.
+   * If full, discard the oldest transcript-only candidate while keeping
+   * the confirmed real-object prefix intact.
    */
   if (gContextObjectCount >=
       MAX_CONTEXT_OBJECTS) {
 
-    for (int i = 1;
+    if (gRealContextObjectCount >=
+        gContextObjectCount) {
+
+      return;
+    }
+
+    for (int i = gRealContextObjectCount + 1;
          i < MAX_CONTEXT_OBJECTS;
          ++i) {
 
@@ -2132,6 +3106,12 @@ void addContextObject(
           MAX_CONTEXT_OBJECT_LENGTH,
           "%s",
           gContextObjects[i]);
+
+      snprintf(
+          gContextObjectCommands[i - 1],
+          MAX_CONTEXT_OBJECT_LENGTH,
+          "%s",
+          gContextObjectCommands[i]);
     }
 
     gContextObjectCount =
@@ -2144,6 +3124,13 @@ void addContextObject(
       MAX_CONTEXT_OBJECT_LENGTH,
       "%s",
       object);
+
+  snprintf(
+      gContextObjectCommands[
+          gContextObjectCount],
+      MAX_CONTEXT_OBJECT_LENGTH,
+      "%s",
+      command);
 
   ++gContextObjectCount;
 }
@@ -2228,20 +3215,28 @@ void detectContextObjects(
           const bool stopWord =
               isContextStopWord(word);
 
+          const bool noiseWord =
+              !stopWord &&
+              isTranscriptContextNoiseWord(
+                  word);
+
           const bool dictionaryWord =
               !stopWord &&
+              !noiseWord &&
               isDictionaryWordCached(word);
 
           const bool accepted =
               !stopWord &&
+              !noiseWord &&
               dictionaryWord;
 
           LOG_INF(
               "FROTZNOUN",
-              "candidate=%s len=%d stop=%d dict=%d accepted=%d",
+              "candidate=%s len=%d stop=%d noise=%d dict=%d accepted=%d",
               word,
               wordLength,
               stopWord ? 1 : 0,
+              noiseWord ? 1 : 0,
               dictionaryWord ? 1 : 0,
               accepted ? 1 : 0);
 
@@ -2271,9 +3266,12 @@ void detectContextObjects(
 
     LOG_INF(
         "FROTZNOUN",
-        "context[%d]=%s",
+        "context[%d]=%s source=%s",
         i,
-        gContextObjects[i]);
+        gContextObjects[i],
+        i < gRealContextObjectCount
+            ? "REAL"
+            : "TEXT");
   }
 }
 
@@ -2340,6 +3338,9 @@ gBackLongPressHandled = false;
 resetContextObjects();
 resetInventoryObjects();
 gCaptureNextOutputAsInventory = false;
+
+gContextAction =
+    ContextAction::Examine;
 
 gDictionaryCacheCount = 0;
 
@@ -3286,6 +4287,57 @@ if (gExitReplacePromptActive) {
       gFrotzBootOutput[
           destIndex] = '\0';
     }
+/*
+ * Phase 3 room tracking.
+ *
+ * Search the entire completed output for a line that EXACTLY matches a
+ * real Z-machine object short name. This recognizes room headings even
+ * after narrative text (for example Planetfall moving the player to the
+ * Brig as the result of EXAMINE BLATHER) without mistaking prose such
+ * as "Opening the small mailbox reveals..." for a room heading.
+ */
+char detectedRoomName[96] = {};
+
+if (FrotzX3::getCurrentRoomName(
+        gFrotzBootOutput,
+        detectedRoomName,
+        sizeof(detectedRoomName))) {
+
+  const bool roomChanged =
+      !stringsEqualIgnoreCase(
+          gCurrentRoomName,
+          detectedRoomName);
+
+  if (roomChanged) {
+
+    LOG_INF(
+        "FROTZLIVE",
+        "room change: \"%s\" -> \"%s\"",
+        gCurrentRoomName[0] != '\0'
+            ? gCurrentRoomName
+            : "(unknown)",
+        detectedRoomName);
+
+    clearContextCandidates();
+
+    snprintf(
+        gCurrentRoomName,
+        sizeof(gCurrentRoomName),
+        "%s",
+        detectedRoomName);
+  }
+
+  refreshLiveRoomObjectCache(
+      gCurrentRoomName);
+}
+
+/*
+ * Promote real object names first so multi-word labels win over
+ * transcript fragments, then retain the old dictionary-based fallback.
+ */
+exposeVisibleLiveObjects(
+    gFrotzBootOutput);
+
 detectContextObjects(
     gFrotzBootOutput);
 
@@ -3617,11 +4669,13 @@ case Menu::Take:
 case Menu::Examine:
 case Menu::Open:
   /*
-   * Every contextual-object submenu has one extra item:
-   * TYPE...
+   * Navigation still moves through one logical flat list.
+   * Rendering below chooses the visible 18-item page from
+   * selectedIndex, so crossing a page boundary automatically
+   * reveals the next/previous page without changing controls.
    */
   itemCount =
-      gContextObjectCount + 1;
+      contextMenuItemCount();
   break;
 
     case Menu::GameMenu:
@@ -3915,6 +4969,9 @@ void InteractiveFictionActivity::activateSelection() {
 
     case 2:
 
+      gContextAction =
+          ContextAction::Take;
+
       currentMenu = Menu::Take;
       selectedIndex = 0;
 
@@ -3923,18 +4980,23 @@ void InteractiveFictionActivity::activateSelection() {
 
     case 3:
 
-      openKeyboard();
+      gContextAction =
+          ContextAction::Drop;
 
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "DROP ");
+      /*
+       * Reuse the Take contextual screen, but its data source becomes
+       * inventory-first when ContextAction::Drop is active.
+       */
+      currentMenu = Menu::Take;
+      selectedIndex = 0;
 
       requestUpdate();
       return;
 
     case 4:
+
+      gContextAction =
+          ContextAction::Examine;
 
       currentMenu = Menu::Examine;
       selectedIndex = 0;
@@ -3943,6 +5005,9 @@ void InteractiveFictionActivity::activateSelection() {
       return;
 
     case 5:
+
+      gContextAction =
+          ContextAction::Open;
 
       currentMenu = Menu::Open;
       selectedIndex = 0;
@@ -3976,13 +5041,15 @@ void InteractiveFictionActivity::activateSelection() {
 
     case 8:
 
-      openKeyboard();
+      gContextAction =
+          ContextAction::Read;
 
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "READ ");
+      /*
+       * Reuse the existing contextual submenu machinery. The action
+       * selector below changes its title/submission verb to READ.
+       */
+      currentMenu = Menu::Examine;
+      selectedIndex = 0;
 
       requestUpdate();
       return;
@@ -4063,18 +5130,74 @@ void InteractiveFictionActivity::activateSelection() {
   submitTypedCommand();
   return;
 
-  case Menu::Take:
+  case Menu::Take: {
+
+  const char* commandVerb =
+      gContextAction ==
+              ContextAction::Drop
+          ? "DROP"
+          : "TAKE";
+
+  const int objectCount =
+      contextMenuObjectCount();
 
   /*
    * Last item is always TYPE...
    */
-  if (selectedIndex >= gContextObjectCount) {
+  if (selectedIndex >=
+      objectCount) {
 
     snprintf(
         typedCommand,
         sizeof(typedCommand),
-        "%s",
-        "TAKE ");
+        "%s ",
+        commandVerb);
+
+    openKeyboard();
+    return;
+  }
+
+  const char* commandObject =
+      contextMenuCommandAt(
+          selectedIndex);
+
+  if (commandObject == nullptr ||
+      commandObject[0] == '\0') {
+
+    return;
+  }
+
+  snprintf(
+      typedCommand,
+      sizeof(typedCommand),
+      "%s %s",
+      commandVerb,
+      commandObject);
+
+  submitTypedCommand();
+  return;
+}
+
+
+case Menu::Examine: {
+
+  const char* commandVerb =
+      gContextAction ==
+              ContextAction::Read
+          ? "READ"
+          : "EXAMINE";
+
+  /*
+   * Last item is always TYPE...
+   */
+  if (selectedIndex >=
+      gContextObjectCount) {
+
+    snprintf(
+        typedCommand,
+        sizeof(typedCommand),
+        "%s ",
+        commandVerb);
 
     openKeyboard();
     return;
@@ -4083,38 +5206,14 @@ void InteractiveFictionActivity::activateSelection() {
   snprintf(
       typedCommand,
       sizeof(typedCommand),
-      "TAKE %s",
-      gContextObjects[selectedIndex]);
+      "%s %s",
+      commandVerb,
+      gContextObjectCommands[
+          selectedIndex]);
 
   submitTypedCommand();
   return;
-
-
-case Menu::Examine:
-
-  /*
-   * Last item is always TYPE...
-   */
-  if (selectedIndex >= gContextObjectCount) {
-
-    snprintf(
-        typedCommand,
-        sizeof(typedCommand),
-        "%s",
-        "EXAMINE ");
-
-    openKeyboard();
-    return;
-  }
-
-  snprintf(
-      typedCommand,
-      sizeof(typedCommand),
-      "EXAMINE %s",
-      gContextObjects[selectedIndex]);
-
-  submitTypedCommand();
-  return;
+}
 
 
 case Menu::Open:
@@ -4138,7 +5237,7 @@ case Menu::Open:
       typedCommand,
       sizeof(typedCommand),
       "OPEN %s",
-      gContextObjects[selectedIndex]);
+      gContextObjectCommands[selectedIndex]);
 
   submitTypedCommand();
   return;
@@ -4571,7 +5670,10 @@ void InteractiveFictionActivity::openKeyboard() {
           typedCommand,
           sizeof(typedCommand),
           "%s",
-          "TAKE ");
+          gContextAction ==
+                  ContextAction::Drop
+              ? "DROP "
+              : "TAKE ");
       break;
 
     case Menu::Examine:
@@ -4579,7 +5681,10 @@ void InteractiveFictionActivity::openKeyboard() {
           typedCommand,
           sizeof(typedCommand),
           "%s",
-          "EXAMINE ");
+          gContextAction ==
+                  ContextAction::Read
+              ? "READ "
+              : "EXAMINE ");
       break;
 
     case Menu::Open:
@@ -4879,14 +5984,25 @@ InteractiveFictionActivity::getSuggestion(
                 ? gInventoryObjectCount
                 : gContextObjectCount;
 
-        for (int i = objectCount - 1;
-             i >= 0;
-             --i) {
+        for (int iteration = 0;
+             iteration < objectCount;
+             ++iteration) {
+
+          /*
+           * DROP keeps the old newest-inventory-first behavior.
+           * Other object verbs prefer the front of the context list,
+           * where Phase-3 real object short names are inserted before
+           * transcript dictionary fragments.
+           */
+          const int i =
+              useInventory
+                  ? (objectCount - 1 - iteration)
+                  : iteration;
 
           const char* object =
               useInventory
                   ? gInventoryObjects[i]
-                  : gContextObjects[i];
+                  : gContextObjectCommands[i];
 
           bool duplicateInPreferredCache = false;
 
@@ -5083,9 +6199,12 @@ const bool resetsRoomContext =
     strcmp(commandCopy, "GO EAST") == 0 ||
     strcmp(commandCopy, "GO WEST") == 0;
 
-if (resetsRoomContext) {
-  resetContextObjects();
-}
+/*
+ * Room context is no longer cleared merely because a command LOOKS like
+ * movement. The completed output is authoritative: if a real room heading
+ * is detected there, the old room cache is replaced at that point.
+ */
+(void)resetsRoomContext;
 
 const bool requestsInventory =
     strcmp(commandCopy, "INVENTORY") == 0 ||
@@ -7025,36 +8144,106 @@ if (currentMenu == Menu::Main) {
   const char* verb = "";
 
   if (currentMenu == Menu::Take) {
-    verb = "Take";
+    verb =
+        gContextAction ==
+                ContextAction::Drop
+            ? "Drop"
+            : "Take";
   } else if (currentMenu == Menu::Examine) {
-    verb = "Examine";
+    verb =
+        gContextAction ==
+                ContextAction::Read
+            ? "Read"
+            : "Examine";
   } else {
     verb = "Open";
+  }
+
+  const int itemCount =
+      contextMenuItemCount();
+
+  const int pageCount =
+      contextMenuPageCount();
+
+  int pageIndex =
+      contextMenuPageForSelection(
+          selectedIndex);
+
+  if (pageIndex >= pageCount) {
+    pageIndex =
+        pageCount - 1;
+  }
+
+  if (pageIndex < 0) {
+    pageIndex = 0;
+  }
+
+  const int firstItem =
+      pageIndex *
+      CONTEXT_MENU_ITEMS_PER_PAGE;
+
+  int visibleItemCount =
+      itemCount - firstItem;
+
+  if (visibleItemCount >
+      CONTEXT_MENU_ITEMS_PER_PAGE) {
+
+    visibleItemCount =
+        CONTEXT_MENU_ITEMS_PER_PAGE;
+  }
+
+  char contextTitle[32] = {};
+
+  if (pageCount > 1) {
+
+    snprintf(
+        contextTitle,
+        sizeof(contextTitle),
+        "%s  %d/%d",
+        verb,
+        pageIndex + 1,
+        pageCount);
+
+  } else {
+
+    snprintf(
+        contextTitle,
+        sizeof(contextTitle),
+        "%s",
+        verb);
   }
 
   renderer.drawText(
       UI_12_FONT_ID,
       LEFT_MARGIN,
       ACTION_TITLE_Y,
-      verb,
+      contextTitle,
       true,
       EpdFontFamily::BOLD);
 
   /*
-   * Objects plus one final TYPE... entry.
+   * Render at most one physical 9-row x 2-column page.
+   *
+   * selectedIndex remains an absolute index into the whole logical
+   * menu. As Prev/Next crosses index 17 -> 18 (or vice versa), the
+   * visible page changes automatically.
    */
-  const int itemCount =
-      gContextObjectCount + 1;
+  const int objectCount =
+      contextMenuObjectCount();
 
-  for (int i = 0;
-       i < itemCount;
-       ++i) {
+  for (int visibleIndex = 0;
+       visibleIndex < visibleItemCount;
+       ++visibleIndex) {
+
+    const int itemIndex =
+        firstItem +
+        visibleIndex;
 
     const int row =
-        i / 2;
+        visibleIndex / 2;
 
     const int col =
-        i % 2;
+        visibleIndex % 2;
 
     const int x =
         LEFT_MARGIN +
@@ -7064,14 +8253,27 @@ if (currentMenu == Menu::Main) {
         ACTION_GRID_Y +
         row * ACTION_ROW_HEIGHT;
 
-    const char* item;
+    char displayItem[32] = {};
 
-    if (i < gContextObjectCount) {
-      item =
-          gContextObjects[i];
+    if (itemIndex <
+        objectCount) {
+
+      const char* sourceDisplay =
+          contextMenuDisplayAt(
+              itemIndex);
+
+      formatContextDisplayName(
+          sourceDisplay,
+          displayItem,
+          sizeof(displayItem));
+
     } else {
-      item =
-          "TYPE...";
+
+      snprintf(
+          displayItem,
+          sizeof(displayItem),
+          "%s",
+          "TYPE...");
     }
 
     char label[40];
@@ -7079,10 +8281,10 @@ if (currentMenu == Menu::Main) {
     snprintf(
         label,
         sizeof(label),
-        i == selectedIndex
+        itemIndex == selectedIndex
             ? "> %s"
             : "  %s",
-        item);
+        displayItem);
 
     renderer.drawText(
         UI_12_FONT_ID,
@@ -7090,7 +8292,7 @@ if (currentMenu == Menu::Main) {
         y,
         label,
         true,
-        i == selectedIndex
+        itemIndex == selectedIndex
             ? EpdFontFamily::BOLD
             : EpdFontFamily::REGULAR);
   }

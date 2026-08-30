@@ -118,6 +118,24 @@ int frotz_submit_command(const char* command);
 int frotz_submit_key(int key);
 int frotz_dictionary_contains(const char* word);
 
+/*
+ * Fill caller-owned fixed-width slots with short names of objects
+ * contained by the currently inferred room object.
+ *
+ * Implemented in object.c.  The caller must only invoke this while
+ * the interpreter is parked waiting for player input.
+ */
+int frotz_get_room_object_names(
+    const char* visible_text,
+    char* names,
+    int max_objects,
+    int name_size);
+
+int frotz_find_room_name(
+    const char* visible_text,
+    char* room_name,
+    int room_name_size);
+
 int frotz_request_autosave(void);
 int frotz_is_autosave_done(void);
 int frotz_autosave_succeeded(void);
@@ -1157,6 +1175,74 @@ bool isDictionaryWord(const char* word)
 
     return
         frotz_dictionary_contains(word) != 0;
+}
+
+
+bool getCurrentRoomName(
+    const char* visibleText,
+    char* roomName,
+    int roomNameSize)
+{
+    if (visibleText == nullptr ||
+        visibleText[0] == '\0' ||
+        roomName == nullptr ||
+        roomNameSize <= 1) {
+
+        return false;
+    }
+
+    roomName[0] = '\0';
+
+    if (gFrotzTask == nullptr ||
+        !gFrotzRunning ||
+        frotz_is_waiting_for_input() == 0) {
+
+        return false;
+    }
+
+    return
+        frotz_find_room_name(
+            visibleText,
+            roomName,
+            roomNameSize) != 0;
+}
+
+
+int getCurrentRoomObjects(
+    const char* visibleText,
+    char* names,
+    int maxObjects,
+    int nameSize)
+{
+    if (visibleText == nullptr ||
+        visibleText[0] == '\0' ||
+        names == nullptr ||
+        maxObjects <= 0 ||
+        nameSize <= 1) {
+
+        return 0;
+    }
+
+    /*
+     * object.c touches live Z-machine object tables and uses the
+     * normal Frotz text decoder/story reader. Those globals are not
+     * thread-safe while the interpreter is executing.
+     *
+     * Match isDictionaryWord(): the UI may inspect them only while
+     * the persistent Frotz task is parked at an input prompt.
+     */
+    if (gFrotzTask == nullptr ||
+        !gFrotzRunning ||
+        frotz_is_waiting_for_input() == 0) {
+
+        return 0;
+    }
+
+    return frotz_get_room_object_names(
+        visibleText,
+        names,
+        maxObjects,
+        nameSize);
 }
 
 
