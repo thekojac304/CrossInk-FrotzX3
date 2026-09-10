@@ -1,5 +1,29 @@
 # Install FrotzX3 into another CrossInk checkout
 
+## Recommended: Double-click Install-FrotzX3.cmd
+
+Open your known-good FrotzX3 folder in File Explorer (for example `C:\Dev\CrossInk`) and double-click **Install-FrotzX3.cmd**. Keep the entire folder together; the launcher finds the app files and existing installer automatically. You do not need to open PowerShell or type installer switches. The window stays open until you press a key at the end.
+
+1. Choose **1**, or press Enter: **Download a fresh CrossInk and install FrotzX3**.
+2. Press Enter to accept a new folder such as `C:\Dev\CrossInk-FrotzX3-20260910`, or paste your preferred location. It must not already exist and must be separate from the original folder.
+3. Wait while CrossInk and its required components download. This downloads upstream's current default branch, not a guaranteed tagged release. To use a particular release already downloaded with its components, choose option 2 instead.
+4. The wizard checks the Home menu and X3 button handling. A known, missing generic button fix is planned automatically, with a backup; unfamiliar code stops for developer review. Nothing is patched until you approve installation.
+5. Answer **Y** to **Everything looks compatible. Install FrotzX3 now?**
+6. Press Enter to build the firmware as well (recommended), or answer N to install without building.
+7. After a successful build, the wizard asks separately whether to flash a connected XTEINK X3. Answer **Y only when you want to write the firmware to that device**. Connect only the intended X3. Answer N to leave the device unchanged.
+
+Success is shown by the large **FrotzX3 INSTALL COMPLETE** message. It lists the new folder, installation result, build result, and whether the X3 was flashed. Follow the single recommended next action at the bottom. **Your original FrotzX3 folder is not changed. Physical X3 testing remains authoritative.**
+
+Option **2** accepts a pasted existing CrossInk folder path, with or without quotes. If that folder has changes that have not been saved to Git, the wizard stops to protect them. Choose option 1 with a new folder rather than trying to bypass the warning. Existing app files are also left for review; the beginner wizard is intended for fresh installations, not forced updates.
+
+Git for Windows must be installed to download and check folders. PlatformIO must be installed if you choose to build. The wizard finds both automatically and gives a plain-English message if either is missing; it does not silently install system tools. If Windows security or an organization policy blocks the launcher, ask for help reviewing and allowing the trusted script rather than disabling machine-wide protections. The launcher uses a process-only PowerShell execution-policy setting.
+
+When a release needs manual review, no guessed patch is applied. A compatibility report is saved under `%TEMP%\FrotzX3-Installer\`; the exact filename is shown in the window. Give that report to ChatGPT/Codex or a developer. It contains local paths, checks, backup paths and command output; review it before sharing publicly. A failed download can leave a new partial folder. An interrupted install/build can leave files in the destination; the report records what happened and lists backend backups. The known-good folder remains untouched.
+
+The wizard keeps the advanced backend below unchanged. Its only additional source patch is the already-tested generic Confirm/Power update, limited to a recognized input layout and verified against the expected result. It does not add Frotz-specific input conditions or edit `main.cpp`. It refuses unrelated unsaved changes even when applying its own compatibility fix.
+
+## Advanced command-line workflow
+
 This Windows PowerShell installer copies the tested FrotzX3 app into a **separate** CrossInk source checkout. It can add the Home menu integration when the destination matches the supported layout. It does not flash your device, edit `main.cpp`, or automatically change input behavior.
 
 ## Keep two separate folders
@@ -140,4 +164,6 @@ For files that did not exist before installation, there is no original backup. R
 
 ## Validation scope
 
-This script supports Windows PowerShell 5.1 and PowerShell 7 syntax. Dry-run checks can safely inspect `C:\Dev\CrossInk` itself, but real installation there is refused. The current host integration and input snapshots are recognized; future layouts require review. Actual copying, backup restoration, installation against a future release, build execution through the installer, and physical X3 behavior still need testing on a separate disposable destination before relying on this for routine upgrades.
+The scripts pass syntax checks in Windows PowerShell 5.1 and PowerShell 7. The advanced backend's dry run can safely inspect `C:\Dev\CrossInk` itself, but real installation there is refused; the wizard rejects that folder even for inspection. The wizard has been exercised with temporary test checkouts, including compatibility checks, protected-folder and unsaved-change refusals, and installation with the known generic input fix and backups. Current host snapshots are recognized; future layouts require review. Live upstream downloading, building and flashing through the wizard still require real-world validation. No hardware was flashed during wizard validation.
+
+Developers can inspect a separate existing checkout with `powershell -NoProfile -File .\tools\FrotzX3-Installer-Wizard.ps1 -CheckOnly -Destination "C:\Dev\CrossInk-TestInstall"`. This skips the menu and performs no download, source patch, installation, build or upload; only a diagnostic report is written under `%TEMP%`.
