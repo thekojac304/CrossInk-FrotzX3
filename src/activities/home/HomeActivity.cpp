@@ -25,7 +25,7 @@
 #include "../reader/EpubReaderUtils.h"
 #include "BookmarkStore.h"
 #include "ClippingStore.h"
-#include "InteractiveFictionActivity.h"
+#include "../frotzx3/InteractiveFictionActivity.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
