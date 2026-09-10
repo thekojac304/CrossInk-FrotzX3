@@ -215,6 +215,27 @@ static int gLiveRoomObjectCount = 0;
 
 static char gCurrentRoomName[96] = {};
 
+/*
+ * Parser disambiguation UI.
+ *
+ * Keep this deliberately tiny and fixed-size. The parser's own prompt text
+ * remains visible in the transcript; these are only convenience choices
+ * extracted from prompts such as:
+ *
+ *   Do you mean the red key or the blue key?
+ */
+static constexpr int MAX_PARSER_CHOICES = 4;
+static constexpr int MAX_PARSER_CHOICE_LENGTH = 32;
+
+static bool gParserChoiceActive = false;
+static int gParserChoiceCount = 0;
+static int gParserChoiceIndex = 0;
+
+static char gParserChoices
+    [MAX_PARSER_CHOICES]
+    [MAX_PARSER_CHOICE_LENGTH] = {};
+
+
 enum class ContextAction {
   Take,
   Drop,
@@ -1820,6 +1841,396 @@ bool containsTextIgnoreCase(
 
   return false;
 }
+
+
+enum class ParserFeedbackType {
+  None,
+  Disambiguation,
+  UnknownWord,
+  IncompleteCommand,
+  NotVisible,
+  PartialUnderstanding
+};
+
+/*
+ * Forward declaration.
+ *
+ * Parser-choice helpers are defined before the main string-helper section,
+ * so declare this here for addParserChoice().
+ */
+bool stringsEqualIgnoreCase(
+    const char* a,
+    const char* b);
+
+
+const char* parserFeedbackTypeName(
+    ParserFeedbackType type) {
+
+  switch (type) {
+
+    case ParserFeedbackType::Disambiguation:
+      return "DISAMBIGUATION";
+
+    case ParserFeedbackType::UnknownWord:
+      return "UNKNOWN_WORD";
+
+    case ParserFeedbackType::IncompleteCommand:
+      return "INCOMPLETE_COMMAND";
+
+    case ParserFeedbackType::NotVisible:
+      return "NOT_VISIBLE";
+
+    case ParserFeedbackType::PartialUnderstanding:
+      return "PARTIAL_UNDERSTANDING";
+
+    case ParserFeedbackType::None:
+    default:
+      return "NONE";
+  }
+}
+
+
+ParserFeedbackType classifyParserFeedback(
+    const char* text) {
+
+  if (text == nullptr ||
+      text[0] == '\0') {
+
+    return ParserFeedbackType::None;
+  }
+
+  /*
+   * Keep this intentionally conservative.
+   *
+   * These signatures are parser-feedback phrases observed in our
+   * dedicated FrotzX3 Test Lab and common classic parser families.
+   * Ordinary in-world failures such as "The door is locked." must
+   * remain normal game output, not parser errors.
+   */
+
+  if (containsTextIgnoreCase(
+          text,
+          "WHICH DO YOU MEAN") ||
+      containsTextIgnoreCase(
+          text,
+          "DID YOU MEAN") ||
+      (containsTextIgnoreCase(
+           text,
+           "DO YOU MEAN") &&
+       containsTextIgnoreCase(
+           text,
+           " OR "))) {
+
+    return ParserFeedbackType::Disambiguation;
+  }
+
+  if (containsTextIgnoreCase(
+          text,
+          "I DIDN'T UNDERSTAND") ||
+      containsTextIgnoreCase(
+          text,
+          "I DON'T UNDERSTAND") ||
+      containsTextIgnoreCase(
+          text,
+          "I DO NOT UNDERSTAND") ||
+      containsTextIgnoreCase(
+          text,
+          "I DON'T KNOW THE WORD") ||
+      containsTextIgnoreCase(
+          text,
+          "I DO NOT KNOW THE WORD") ||
+      containsTextIgnoreCase(
+          text,
+          "YOU USED THE WORD")) {
+
+    return ParserFeedbackType::UnknownWord;
+  }
+
+  if (containsTextIgnoreCase(
+          text,
+          "I THINK YOU WANTED TO SAY") ||
+      containsTextIgnoreCase(
+          text,
+          "WHAT DO YOU WANT TO") ||
+      containsTextIgnoreCase(
+          text,
+          "WHAT DO YOU WANT TO DO WITH")) {
+
+    return ParserFeedbackType::IncompleteCommand;
+  }
+
+  if (containsTextIgnoreCase(
+          text,
+          "CAN'T SEE ANY SUCH THING") ||
+      containsTextIgnoreCase(
+          text,
+          "CANNOT SEE ANY SUCH THING") ||
+      containsTextIgnoreCase(
+          text,
+          "YOU CAN'T SEE") ||
+      containsTextIgnoreCase(
+          text,
+          "YOU CANNOT SEE")) {
+
+    return ParserFeedbackType::NotVisible;
+  }
+
+  if (containsTextIgnoreCase(
+          text,
+          "I ONLY UNDERSTOOD YOU AS FAR AS") ||
+      containsTextIgnoreCase(
+          text,
+          "I ONLY UNDERSTOOD")) {
+
+    return ParserFeedbackType::PartialUnderstanding;
+  }
+
+  return ParserFeedbackType::None;
+}
+
+
+void resetParserChoices() {
+
+  gParserChoiceActive = false;
+  gParserChoiceCount = 0;
+  gParserChoiceIndex = 0;
+
+  for (int i = 0;
+       i < MAX_PARSER_CHOICES;
+       ++i) {
+
+    gParserChoices[i][0] = '\0';
+  }
+}
+
+
+bool addParserChoice(
+    const char* choice) {
+
+  if (choice == nullptr ||
+      choice[0] == '\0' ||
+      gParserChoiceCount >=
+          MAX_PARSER_CHOICES) {
+
+    return false;
+  }
+
+  for (int i = 0;
+       i < gParserChoiceCount;
+       ++i) {
+
+    if (stringsEqualIgnoreCase(
+            gParserChoices[i],
+            choice)) {
+
+      return false;
+    }
+  }
+
+  snprintf(
+      gParserChoices[
+          gParserChoiceCount],
+      MAX_PARSER_CHOICE_LENGTH,
+      "%s",
+      choice);
+
+  ++gParserChoiceCount;
+  return true;
+}
+
+
+void trimParserChoice(
+    char* text) {
+
+  if (text == nullptr) {
+    return;
+  }
+
+  size_t len = strlen(text);
+
+  while (len > 0 &&
+         (text[len - 1] == ' ' ||
+          text[len - 1] == '?' ||
+          text[len - 1] == '.' ||
+          text[len - 1] == ',')) {
+
+    text[--len] = '\0';
+  }
+
+  size_t start = 0;
+
+  while (text[start] == ' ') {
+    ++start;
+  }
+
+  if (start > 0) {
+    memmove(
+        text,
+        text + start,
+        strlen(text + start) + 1);
+  }
+
+  /*
+   * Strip a leading English article from each displayed choice.
+   * "the red key" becomes "red key", which is a safer compact reply.
+   */
+  static const char* articles[] = {
+      "THE ",
+      "A ",
+      "AN "
+  };
+
+  for (int i = 0;
+       i < 3;
+       ++i) {
+
+    const size_t articleLen =
+        strlen(articles[i]);
+
+    if (strlen(text) > articleLen &&
+        strncasecmp(
+            text,
+            articles[i],
+            articleLen) == 0) {
+
+      memmove(
+          text,
+          text + articleLen,
+          strlen(text + articleLen) + 1);
+
+      break;
+    }
+  }
+}
+
+
+void extractDisambiguationChoices(
+    const char* text) {
+
+  resetParserChoices();
+
+  if (text == nullptr ||
+      text[0] == '\0') {
+
+    return;
+  }
+
+  /*
+   * First-pass grammar for common classic parser prompts:
+   *
+   *   Do you mean the red key or the blue key?
+   *
+   * This deliberately does not attempt full natural-language parsing.
+   * We only split a short prompt around " OR " and use the two noun
+   * phrases flanking it.
+   */
+  const char* orPos = nullptr;
+
+  for (const char* p = text;
+       *p != '\0';
+       ++p) {
+
+    if (toUpperAscii(p[0]) == ' ' &&
+        toUpperAscii(p[1]) == 'O' &&
+        toUpperAscii(p[2]) == 'R' &&
+        toUpperAscii(p[3]) == ' ') {
+
+      orPos = p;
+      break;
+    }
+  }
+
+  if (orPos == nullptr) {
+    return;
+  }
+
+  const char* leftStart = text;
+
+  /*
+   * Prefer text after "MEAN " so the first choice does not include
+   * "Do you mean".
+   */
+  const char* meanPos = nullptr;
+
+  for (const char* p = text;
+       *p != '\0';
+       ++p) {
+
+    if (strncasecmp(
+            p,
+            "MEAN ",
+            5) == 0) {
+
+      meanPos = p;
+    }
+  }
+
+  if (meanPos != nullptr &&
+      meanPos < orPos) {
+
+    leftStart = meanPos + 5;
+  }
+
+  char left[MAX_PARSER_CHOICE_LENGTH] = {};
+  char right[MAX_PARSER_CHOICE_LENGTH] = {};
+
+  size_t leftLen =
+      static_cast<size_t>(
+          orPos - leftStart);
+
+  if (leftLen >= sizeof(left)) {
+    leftLen = sizeof(left) - 1;
+  }
+
+  memcpy(
+      left,
+      leftStart,
+      leftLen);
+
+  left[leftLen] = '\0';
+
+  const char* rightStart =
+      orPos + 4;
+
+  size_t rightLen = 0;
+
+  while (rightStart[rightLen] != '\0' &&
+         rightStart[rightLen] != '\n' &&
+         rightStart[rightLen] != '\r' &&
+         rightLen <
+             sizeof(right) - 1) {
+
+    right[rightLen] =
+        rightStart[rightLen];
+
+    ++rightLen;
+  }
+
+  right[rightLen] = '\0';
+
+  trimParserChoice(left);
+  trimParserChoice(right);
+
+  if (left[0] != '\0') {
+    addParserChoice(left);
+  }
+
+  if (right[0] != '\0') {
+    addParserChoice(right);
+  }
+
+  if (gParserChoiceCount >= 2) {
+
+    gParserChoiceActive = true;
+    gParserChoiceIndex = 0;
+
+    LOG_INF(
+        "FROTZPARSER",
+        "disambiguation choices: \"%s\" / \"%s\"",
+        gParserChoices[0],
+        gParserChoices[1]);
+  }
+}
 bool stringsEqualIgnoreCase(
     const char* a,
     const char* b) {
@@ -3337,6 +3748,7 @@ gBackLongPressHandled = false;
 
 resetContextObjects();
 resetInventoryObjects();
+resetParserChoices();
 gCaptureNextOutputAsInventory = false;
 
 gContextAction =
@@ -4288,66 +4700,101 @@ if (gExitReplacePromptActive) {
           destIndex] = '\0';
     }
 /*
- * Phase 3 room tracking.
+ * Classify parser feedback BEFORE room/context analysis.
  *
- * Search the entire completed output for a line that EXACTLY matches a
- * real Z-machine object short name. This recognizes room headings even
- * after narrative text (for example Planetfall moving the player to the
- * Brig as the result of EXAMINE BLATHER) without mistaking prose such
- * as "Opening the small mailbox reveals..." for a room heading.
+ * Parser prompts such as "You can't see any such thing" are not room
+ * descriptions and must not contaminate room/object heuristics.
  */
-char detectedRoomName[96] = {};
+const ParserFeedbackType parserFeedback =
+    classifyParserFeedback(
+        gFrotzBootOutput);
 
-if (FrotzX3::getCurrentRoomName(
-        gFrotzBootOutput,
-        detectedRoomName,
-        sizeof(detectedRoomName))) {
+if (parserFeedback !=
+    ParserFeedbackType::None) {
 
-  const bool roomChanged =
-      !stringsEqualIgnoreCase(
-          gCurrentRoomName,
-          detectedRoomName);
+  LOG_INF(
+      "FROTZPARSER",
+      "type=%s output=\"%.120s\"",
+      parserFeedbackTypeName(
+          parserFeedback),
+      gFrotzBootOutput);
+}
 
-  if (roomChanged) {
+if (parserFeedback ==
+    ParserFeedbackType::Disambiguation) {
 
-    LOG_INF(
-        "FROTZLIVE",
-        "room change: \"%s\" -> \"%s\"",
-        gCurrentRoomName[0] != '\0'
-            ? gCurrentRoomName
-            : "(unknown)",
-        detectedRoomName);
+  extractDisambiguationChoices(
+      gFrotzBootOutput);
 
-    clearContextCandidates();
+} else {
 
-    snprintf(
-        gCurrentRoomName,
-        sizeof(gCurrentRoomName),
-        "%s",
-        detectedRoomName);
-  }
-
-  refreshLiveRoomObjectCache(
-      gCurrentRoomName);
+  resetParserChoices();
 }
 
 /*
- * Promote real object names first so multi-word labels win over
- * transcript fragments, then retain the old dictionary-based fallback.
+ * Only ordinary game output is allowed to update room/context state.
+ *
+ * DISAMBIGUATION has its own bounded choice extractor above.
+ * UNKNOWN_WORD / INCOMPLETE_COMMAND / NOT_VISIBLE / PARTIAL_UNDERSTANDING
+ * deliberately leave the existing room/context cache untouched.
  */
-exposeVisibleLiveObjects(
-    gFrotzBootOutput);
+if (parserFeedback ==
+    ParserFeedbackType::None) {
 
-detectContextObjects(
-    gFrotzBootOutput);
+  /*
+   * Phase 3 room tracking.
+   *
+   * Search the entire completed output for a line that EXACTLY matches a
+   * real Z-machine object short name. This recognizes room headings even
+   * after narrative text without mistaking ordinary prose for a room heading.
+   */
+  char detectedRoomName[96] = {};
 
-/*
- * Diagnostic only:
- * identify the likely current room from the first visible line,
- * then dump that real Z-machine object's current child tree.
- */
-frotz_debug_room_tree(
-    gFrotzBootOutput);
+  if (FrotzX3::getCurrentRoomName(
+          gFrotzBootOutput,
+          detectedRoomName,
+          sizeof(detectedRoomName))) {
+
+    const bool roomChanged =
+        !stringsEqualIgnoreCase(
+            gCurrentRoomName,
+            detectedRoomName);
+
+    if (roomChanged) {
+
+      LOG_INF(
+          "FROTZLIVE",
+          "room change: \"%s\" -> \"%s\"",
+          gCurrentRoomName[0] != '\0'
+              ? gCurrentRoomName
+              : "(unknown)",
+          detectedRoomName);
+
+      clearContextCandidates();
+
+      snprintf(
+          gCurrentRoomName,
+          sizeof(gCurrentRoomName),
+          "%s",
+          detectedRoomName);
+    }
+
+    refreshLiveRoomObjectCache(
+        gCurrentRoomName);
+  }
+
+  exposeVisibleLiveObjects(
+      gFrotzBootOutput);
+
+  detectContextObjects(
+      gFrotzBootOutput);
+
+  /*
+   * Diagnostic only for ordinary output.
+   */
+  frotz_debug_room_tree(
+      gFrotzBootOutput);
+}
 
 if (gCaptureNextOutputAsInventory) {
 
@@ -4647,6 +5094,26 @@ if (mappedInput.wasPressed(
 void InteractiveFictionActivity::moveSelection(int delta) {
 
   if (currentMenu == Menu::Main &&
+      gParserChoiceActive) {
+
+    gParserChoiceIndex += delta;
+
+    if (gParserChoiceIndex < 0) {
+      gParserChoiceIndex =
+          gParserChoiceCount - 1;
+    }
+
+    if (gParserChoiceIndex >=
+        gParserChoiceCount) {
+
+      gParserChoiceIndex = 0;
+    }
+
+    requestUpdate();
+    return;
+  }
+
+  if (currentMenu == Menu::Main &&
       FrotzX3::waitingForKeyInput()) {
 
     moveSingleKeySelection(delta);
@@ -4662,7 +5129,7 @@ void InteractiveFictionActivity::moveSelection(int delta) {
   break;
 
     case Menu::Go:
-      itemCount = 4;
+      itemCount = 12;
       break;
 
 case Menu::Take:
@@ -4942,6 +5409,26 @@ void InteractiveFictionActivity::activateSingleKeySelection() {
 
 void InteractiveFictionActivity::activateSelection() {
 
+  if (currentMenu == Menu::Main &&
+      gParserChoiceActive &&
+      gParserChoiceCount > 0 &&
+      gParserChoiceIndex >= 0 &&
+      gParserChoiceIndex <
+          gParserChoiceCount) {
+
+    snprintf(
+        typedCommand,
+        sizeof(typedCommand),
+        "%s",
+        gParserChoices[
+            gParserChoiceIndex]);
+
+    resetParserChoices();
+
+    submitTypedCommand();
+    return;
+  }
+
   switch (currentMenu) {
 
     case Menu::Main:
@@ -5092,42 +5579,45 @@ void InteractiveFictionActivity::activateSelection() {
 
     case Menu::Go:
 
-  switch (selectedIndex) {
+  /*
+   * Logical movement order follows the compass clockwise:
+   *
+   *   N -> NE -> E -> SE -> S -> SW -> W -> NW
+   *
+   * Then the non-compass movement choices:
+   *
+   *   UP -> DOWN -> IN -> OUT
+   *
+   * Prev/Next therefore feels like rotating around a compass rather
+   * than stepping through an arbitrary vertical list.
+   */
+  static const char* movementCommands[] = {
+      "NORTH",
+      "NORTHEAST",
+      "EAST",
+      "SOUTHEAST",
+      "SOUTH",
+      "SOUTHWEST",
+      "WEST",
+      "NORTHWEST",
+      "UP",
+      "DOWN",
+      "IN",
+      "OUT"
+  };
 
-    case 0:
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "NORTH");
-      break;
+  if (selectedIndex >= 0 &&
+      selectedIndex < 12) {
 
-    case 1:
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "SOUTH");
-      break;
+    snprintf(
+        typedCommand,
+        sizeof(typedCommand),
+        "%s",
+        movementCommands[selectedIndex]);
 
-    case 2:
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "EAST");
-      break;
-
-    case 3:
-      snprintf(
-          typedCommand,
-          sizeof(typedCommand),
-          "%s",
-          "WEST");
-      break;
+    submitTypedCommand();
   }
 
-  submitTypedCommand();
   return;
 
   case Menu::Take: {
@@ -6058,11 +6548,17 @@ InteractiveFictionActivity::getSuggestion(
       "LOOK",
       "INVENTORY",
       "NORTH",
+      "NORTHEAST",
+      "NORTHWEST",
       "SOUTH",
+      "SOUTHEAST",
+      "SOUTHWEST",
       "EAST",
       "WEST",
       "UP",
       "DOWN",
+      "IN",
+      "OUT",
       "ENTER",
       "EXIT",
       "OPEN ",
@@ -6356,6 +6852,7 @@ if (!gGamePickerActive &&
   }
 
   constexpr int HEADER_TEXT_Y = 48;
+  constexpr int APPROX_CHAR_WIDTH = 8;
 
   renderer.drawText(
       UI_12_FONT_ID,
@@ -6366,44 +6863,150 @@ if (!gGamePickerActive &&
       EpdFontFamily::BOLD);
 
   /*
-   * UI_12 is approximately 8 pixels wide per character on the X3.
-   * Use that to center the filename without depending on a separate
-   * text-measurement API.
+   * Z1-Z3 have a real interpreter-managed status line.
+   *
+   * Use that structured status data when available:
+   *
+   *   FrotzX3        West of House        0 / 2
+   *
+   * or, for time-based stories:
+   *
+   *   FrotzX3        Station              13:42
+   *
+   * Z4-Z8 do not have the same standardized status model, so they
+   * retain the existing story-filename + transcript-page header.
    */
-  constexpr int APPROX_CHAR_WIDTH = 8;
+  FrotzX3::StatusInfo statusInfo = {};
 
-  int storyX =
-      (pageWidth -
-       static_cast<int>(
-           strlen(storyFilename)) *
-           APPROX_CHAR_WIDTH) / 2;
+  const bool hasNativeStatus =
+      FrotzX3::getStatusInfo(
+          &statusInfo);
 
-  if (storyX < 120) {
-    storyX = 120;
+  if (hasNativeStatus) {
+
+    char statusRight[24] = {};
+
+    if (statusInfo.usesTime) {
+
+      snprintf(
+          statusRight,
+          sizeof(statusRight),
+          "%d:%02d",
+          statusInfo.value1,
+          statusInfo.value2);
+
+    } else {
+
+      snprintf(
+          statusRight,
+          sizeof(statusRight),
+          "%d / %d",
+          statusInfo.value1,
+          statusInfo.value2);
+    }
+
+    const int rightX =
+        pageWidth -
+        LEFT_MARGIN -
+        static_cast<int>(
+            strlen(statusRight)) *
+            APPROX_CHAR_WIDTH;
+
+    renderer.drawText(
+        UI_12_FONT_ID,
+        rightX,
+        HEADER_TEXT_Y,
+        statusRight,
+        true,
+        EpdFontFamily::BOLD);
+
+    /*
+     * Center the room name in the remaining middle area.
+     * Cap its visible length so it cannot collide with FrotzX3
+     * on the left or score/time on the right.
+     */
+    char roomDisplay[24] = {};
+
+    snprintf(
+        roomDisplay,
+        sizeof(roomDisplay),
+        "%.21s",
+        statusInfo.room);
+
+    int roomX =
+        (pageWidth -
+         static_cast<int>(
+             strlen(roomDisplay)) *
+             APPROX_CHAR_WIDTH) / 2;
+
+    if (roomX < 100) {
+      roomX = 100;
+    }
+
+    const int roomRight =
+        roomX +
+        static_cast<int>(
+            strlen(roomDisplay)) *
+            APPROX_CHAR_WIDTH;
+
+    if (roomRight >
+        rightX - 12) {
+
+      roomX =
+          rightX -
+          12 -
+          static_cast<int>(
+              strlen(roomDisplay)) *
+              APPROX_CHAR_WIDTH;
+    }
+
+    if (roomX < 100) {
+      roomX = 100;
+    }
+
+    renderer.drawText(
+        UI_12_FONT_ID,
+        roomX,
+        HEADER_TEXT_Y,
+        roomDisplay,
+        true,
+        EpdFontFamily::BOLD);
+
+  } else {
+
+    int storyX =
+        (pageWidth -
+         static_cast<int>(
+             strlen(storyFilename)) *
+             APPROX_CHAR_WIDTH) / 2;
+
+    if (storyX < 120) {
+      storyX = 120;
+    }
+
+    renderer.drawText(
+        UI_12_FONT_ID,
+        storyX,
+        HEADER_TEXT_Y,
+        storyFilename,
+        true,
+        EpdFontFamily::BOLD);
+
+    int pageX =
+        pageWidth -
+        LEFT_MARGIN -
+        static_cast<int>(
+            strlen(pageStatus)) *
+            APPROX_CHAR_WIDTH;
+
+    renderer.drawText(
+        UI_12_FONT_ID,
+        pageX,
+        HEADER_TEXT_Y,
+        pageStatus,
+        true,
+        EpdFontFamily::BOLD);
   }
-
-  renderer.drawText(
-      UI_12_FONT_ID,
-      storyX,
-      HEADER_TEXT_Y,
-      storyFilename,
-      true,
-      EpdFontFamily::BOLD);
-
-  int pageX =
-      pageWidth -
-      LEFT_MARGIN -
-      static_cast<int>(
-          strlen(pageStatus)) *
-          APPROX_CHAR_WIDTH;
-
-  renderer.drawText(
-      UI_12_FONT_ID,
-      pageX,
-      HEADER_TEXT_Y,
-      pageStatus,
-      true,
-      EpdFontFamily::BOLD);
 
 } else {
 
@@ -7955,7 +8558,58 @@ constexpr int ACTION_ROW_HEIGHT = 32;
 
 if (currentMenu == Menu::Main) {
 
-  if (FrotzX3::waitingForKeyInput()) {
+  if (gParserChoiceActive &&
+      gParserChoiceCount > 0) {
+
+    renderer.drawText(
+        UI_12_FONT_ID,
+        LEFT_MARGIN,
+        ACTION_TITLE_Y,
+        "Choose Meaning",
+        true,
+        EpdFontFamily::BOLD);
+
+    constexpr int PARSER_CHOICE_COL_WIDTH = 220;
+    constexpr int PARSER_CHOICE_ROW_HEIGHT = 40;
+
+    for (int i = 0;
+         i < gParserChoiceCount;
+         ++i) {
+
+      const int row = i / 2;
+      const int col = i % 2;
+
+      char displayChoice[32] = {};
+
+      formatContextDisplayName(
+          gParserChoices[i],
+          displayChoice,
+          sizeof(displayChoice));
+
+      char label[40] = {};
+
+      snprintf(
+          label,
+          sizeof(label),
+          i == gParserChoiceIndex
+              ? "[ %s ]"
+              : "  %s",
+          displayChoice);
+
+      renderer.drawText(
+          UI_12_FONT_ID,
+          LEFT_MARGIN +
+              col * PARSER_CHOICE_COL_WIDTH,
+          ACTION_GRID_Y +
+              row * PARSER_CHOICE_ROW_HEIGHT,
+          label,
+          true,
+          i == gParserChoiceIndex
+              ? EpdFontFamily::BOLD
+              : EpdFontFamily::REGULAR);
+    }
+
+  } else if (FrotzX3::waitingForKeyInput()) {
 
     /*
      * READ_CHAR mode.
@@ -8082,11 +8736,69 @@ if (currentMenu == Menu::Main) {
 
 } else if (currentMenu == Menu::Go) {
 
-  static const char* directions[] = {
-      "NORTH",
-      "SOUTH",
-      "EAST",
-      "WEST"
+  /*
+   * Purpose-built movement screen.
+   *
+   * The first eight logical items are arranged as a compass:
+   *
+   *        NW     N      NE
+   *        W             E
+   *        SW     S      SE
+   *
+   * Prev/Next follows the logical clockwise order defined in
+   * activateSelection():
+   *
+   *   N -> NE -> E -> SE -> S -> SW -> W -> NW
+   *
+   * UP/DOWN and IN/OUT sit underneath as secondary movement choices.
+   */
+static const char* movementLabels[12] = {
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW",
+    "UP",
+    "DOWN",
+    "IN",
+    "OUT"
+};
+
+  /*
+   * X positions use the same roughly 3-column spacing already proven
+   * elsewhere in the UI, but are tuned here to center the compass.
+   */
+  static const int movementX[12] = {
+      170,  // NORTH
+      306,  // NORTHEAST
+      306,  // EAST
+      306,  // SOUTHEAST
+      170,  // SOUTH
+       24,  // SOUTHWEST
+       24,  // WEST
+       24,  // NORTHWEST
+       92,  // UP
+      246,  // DOWN
+       92,  // IN
+      246   // OUT
+  };
+
+  static const int movementY[12] = {
+      456,  // NORTH
+      484,  // NORTHEAST
+      516,  // EAST
+      548,  // SOUTHEAST
+      576,  // SOUTH
+      548,  // SOUTHWEST
+      516,  // WEST
+      484,  // NORTHWEST
+      620,  // UP
+      620,  // DOWN
+      652,  // IN
+      652   // OUT
   };
 
   renderer.drawText(
@@ -8098,37 +8810,23 @@ if (currentMenu == Menu::Main) {
       EpdFontFamily::BOLD);
 
   for (int i = 0;
-       i < 4;
+       i < 12;
        ++i) {
 
-    const int row =
-        i / 2;
-
-    const int col =
-        i % 2;
-
-    const int x =
-        LEFT_MARGIN +
-        col * ACTION_COL_WIDTH;
-
-    const int y =
-        ACTION_GRID_Y +
-        row * ACTION_ROW_HEIGHT;
-
-    char label[24];
+    char label[24] = {};
 
     snprintf(
         label,
         sizeof(label),
         i == selectedIndex
-            ? "> %s"
-            : "  %s",
-        directions[i]);
+            ? "[%s]"
+            : " %s ",
+        movementLabels[i]);
 
     renderer.drawText(
         UI_12_FONT_ID,
-        x,
-        y,
+        movementX[i],
+        movementY[i],
         label,
         true,
         i == selectedIndex

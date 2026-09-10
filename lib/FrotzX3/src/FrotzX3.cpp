@@ -136,6 +136,13 @@ int frotz_find_room_name(
     char* room_name,
     int room_name_size);
 
+int frotz_get_v3_status(
+    char* room_name,
+    int room_name_size,
+    int* uses_time,
+    int* value1,
+    int* value2);
+
 int frotz_request_autosave(void);
 int frotz_is_autosave_done(void);
 int frotz_autosave_succeeded(void);
@@ -1178,6 +1185,51 @@ bool isDictionaryWord(const char* word)
 }
 
 
+bool getStatusInfo(StatusInfo* status)
+{
+    if (status == nullptr) {
+        return false;
+    }
+
+    *status = StatusInfo{};
+
+    /*
+     * The status accessor reads live Z-machine globals/object data.
+     * Match the safety rule used by the dictionary and object APIs:
+     * only inspect that state while the persistent interpreter task is
+     * parked at a player-input prompt.
+     */
+    if (gFrotzTask == nullptr ||
+        !gFrotzRunning ||
+        frotz_is_waiting_for_input() == 0) {
+
+        return false;
+    }
+
+    int usesTime = 0;
+    int value1 = 0;
+    int value2 = 0;
+
+    if (frotz_get_v3_status(
+            status->room,
+            sizeof(status->room),
+            &usesTime,
+            &value1,
+            &value2) == 0) {
+
+        return false;
+    }
+
+    status->available = true;
+    status->usesTime =
+        usesTime != 0;
+    status->value1 = value1;
+    status->value2 = value2;
+
+    return true;
+}
+
+
 bool getCurrentRoomName(
     const char* visibleText,
     char* roomName,
@@ -1248,6 +1300,37 @@ int getCurrentRoomObjects(
 
 const char* output()
 {
+    /*
+     * Temporary Phase-B diagnostic.
+     *
+     * The activity asks for output only after Frotz has reached the next
+     * input prompt, which is exactly when the structured V1-V3 status API
+     * is safe to inspect. This lets us validate the API on real hardware
+     * before changing the gameplay header.
+     */
+    StatusInfo status;
+
+    if (getStatusInfo(&status)) {
+
+        if (status.usesTime) {
+            LOG_INF(
+                "FROTZSTATUS",
+                "room=\"%s\" time=%02d:%02d",
+                status.room,
+                status.value1,
+                status.value2
+            );
+        } else {
+            LOG_INF(
+                "FROTZSTATUS",
+                "room=\"%s\" score=%d moves=%d",
+                status.room,
+                status.value1,
+                status.value2
+            );
+        }
+    }
+
     return frotz_get_output();
 }
 

@@ -68,6 +68,30 @@ bool isDictionaryWord(const char* word);
  * string, or per-object heap allocation is used.
  */
 /*
+ * Standardized V1-V3 status information.
+ *
+ * For score-based games:
+ *   value1 = score
+ *   value2 = moves
+ *
+ * For time-based games:
+ *   value1 = hour (24-hour value stored by the story)
+ *   value2 = minute
+ *
+ * V4+ stories do not have this standardized status-line model, so
+ * getStatusInfo() returns false for them.
+ */
+struct StatusInfo {
+    bool available = false;
+    bool usesTime = false;
+    char room[64] = {};
+    int value1 = 0;
+    int value2 = 0;
+};
+
+bool getStatusInfo(StatusInfo* status);
+
+/*
  * Find a real Z-machine object short name that appears as an entire
  * visible output line. Used by the UI as a conservative room-heading
  * detector. Returns false unless Frotz is safely waiting for input.

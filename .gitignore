@@ -50,3 +50,5 @@ dist-publish/
 /dependencies.lock
 /sdkconfig.*
 /vendor/frotz/
+
+.agents/

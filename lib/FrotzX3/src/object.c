@@ -611,6 +611,87 @@ static int crossink_collect_room_object_names(
 
 
 /*
+ * frotz_get_v3_status
+ *
+ * Read the standardized V1-V3 Z-machine status information directly from
+ * the same three globals used by z_show_status() in screen.c.
+ *
+ * global 0 = current location object
+ * global 1 = score or hour
+ * global 2 = moves or minutes
+ *
+ * The caller owns all storage. No heap allocation is performed.
+ * Returns FALSE for V4+ stories because those versions do not have this
+ * standardized status-line model.
+ */
+int frotz_get_v3_status(
+    char *room_name,
+    int room_name_size,
+    int *uses_time,
+    int *value1,
+    int *value2)
+{
+    zword global0;
+    zword global1;
+    zword global2;
+    zword addr;
+    int time_mode;
+
+    if (room_name == NULL ||
+        room_name_size <= 1 ||
+        uses_time == NULL ||
+        value1 == NULL ||
+        value2 == NULL) {
+
+        return FALSE;
+    }
+
+    room_name[0] = '\0';
+    *uses_time = 0;
+    *value1 = 0;
+    *value2 = 0;
+
+    if (h_version >= V4)
+        return FALSE;
+
+    addr = h_globals;
+    LOW_WORD(addr, global0)
+    addr += 2;
+    LOW_WORD(addr, global1)
+    addr += 2;
+    LOW_WORD(addr, global2)
+
+    if (global0 == 0 ||
+        !frotz_get_object_short_name(
+            global0,
+            room_name,
+            room_name_size)) {
+
+        room_name[0] = '\0';
+        return FALSE;
+    }
+
+    room_name[room_name_size - 1] = '\0';
+
+    time_mode =
+        (h_config & CONFIG_TIME) != 0;
+
+    *uses_time = time_mode ? 1 : 0;
+
+    if (time_mode) {
+        *value1 = (int)global1;
+        *value2 = (int)global2;
+    } else {
+        /* Match print_num() semantics used by z_show_status(). */
+        *value1 = (int)(short)global1;
+        *value2 = (int)(short)global2;
+    }
+
+    return TRUE;
+}
+
+
+/*
  * frotz_find_room_name
  *
  * Find an object short name that appears as an entire visible output line.
