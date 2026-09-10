@@ -1,210 +1,367 @@
-# FrotzX3 distribution
+# FrotzX3
 
-Start with the [FrotzX3 public README](FROTZX3_README.md) for installation,
-features, and tested-device limits. This distribution includes GPL-2.0-or-later
-Frotz-derived code alongside MIT-licensed CrossInk; see
-[licensing](FROTZX3_LICENSE.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
-No games are included. The CrossInk description below is retained for upstream
-context; its device list is not a FrotzX3 testing claim.
+**Frotz / Z-machine interactive fiction for the XTEINK X3, integrated into CrossInk.**
 
-> **This is a personal fork of [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader)** with a focus on improved fonts and minimal reading stats.
+FrotzX3 turns the XTEINK X3 into a dedicated e-ink text-adventure machine.
 
-### Supported Devices
+It runs real Z-machine story files through a native-feeling interface designed around the X3's limited physical controls, e-ink display, and ESP32-C3 hardware.
 
-- Xteink X3
-- Xteink X4
-- Seeed Studio Sticky
+FrotzX3 is built on top of [CrossInk](https://github.com/uxjulia/CrossInk) and the [Frotz](https://github.com/DavidGriffith/frotz) Z-machine interpreter.
 
-## What's different in this fork
-
-My goal with this fork was to maintain the core Crosspoint firmware while integrating my preferred typography and some lightweight reading statistics. I’ve focused on keeping the underlying system stable while layering in a few "nice-to-have" features and UI refinements along the way.
-
-<table>
-  <tr>
-    <td align="center">
-      <img src="./docs/images/bitter-small-15-margin.jpg" alt="Font: Bitter, Size: 12 pt, Margin: 15" /><br/>
-      <em>Font: Bitter, Size: 12 pt, Margin: 15</em>
-    </td>
-    <td align="center">
-      <img src="./docs/images/reading-stats.jpg" alt="Reading Stats with custom front button mapping shown" /><br/>
-      <em>Reading Stats with custom front button mapping shown</em>
-    </td>
-  </tr>
-</table>
-
-### Highlights
-
-- New reader fonts: Lexend Deca and Bitter.
-- Unicode emoji and miscellaneous symbols support (a limited subset).
-- Reader font sizes: 10 pt, 12 pt, 14 pt, and 16 pt.
-- Added ~~strikethrough~~ support.
-- Made <u>underlines</u> thicker for better visibility.
-- Added a custom `Minimal` theme and sleep screen option for the minimalists out there.
-- Added a custom `Dashboard` theme and sleep screen option for reading stats enthusiasts.
-- Added support for `<hr>` section breaks.
-- Added support for "redaction" style rendering.
-- Added improved support for tables with simple markup.
-- Added ability to add bookmarks.
-- Added ability to remap front buttons that only applies in the reader.
-- Added Bionic Reading and Guide Dots as optional reader modes.
-- Added Force Paragraph Indents for books that render as one giant wall of text.
-- Added ability to pin a sleep image as a favorite. The favorited image will always be displayed when your sleep settings are set to `Custom` or `Cover + Custom` (when no cover is available).
-- Added more in-reader control remapping options for side buttons, short power button clicks, and long-press menu actions.
-- Added ability to mark a book as finished from the in-book menu. A pop-up will also display once 99% of the book is reached. This status allows tracking of total books read.
-- Added ability to move finished books to "Read" folder.
-- In-book menu to quickly adjust reader options without having to exit the book.
-- Reading stats: total books read, total reading time, number of sessions, pages turned, average session time, pages turned per minute. You can also set your reading stats as your sleep screen.
-- All-time reading stats [syncing](./docs/reading-stats-sync.md) between two CrossInk devices.
-- Reading [progress sync](./docs/nearby-position-sync.md) between two CrossInk devices.
-- Added customizable Auto Page Turn Interval (anything between 5-120 seconds).
-- Added ability to view Recent Books as a 3x3 grid view.
-- To view a more detailed list for each version, visit the [releases](https://github.com/uxjulia/CrossInk/releases) page to read release notes.
+> **No games are included.**
+>
+> You must provide your own legally obtained Z-machine story files.
 
 ---
 
-### Reader Fonts
+## Quick Start
 
-The default fonts have been replaced with Lexend Deca and Bitter. These fonts have been chosen specifically to improve reading fluency and e-ink performance. These 'sturdier' typefaces feature uniform stroke weights and open geometries, allowing the X4/X3 to render crisp, high-contrast text with font-aliasing on while significantly reducing ghosting and artifacts.
+### Recommended Windows installation
 
-- [Lexend Deca](https://fonts.google.com/specimen/Lexend+Deca) - A research-backed sans-serif typeface designed to improve reading fluency. Lexend was engineered based on the theory that reading issues are often a design problem (visual crowding) rather than a cognitive one.
-- [Bitter](https://fonts.google.com/specimen/Bitter) - A "contemporary" slab serif typeface for text, it is specially designed for comfortably reading on digital screens. The consistent stroke weight of Bitter helps it render particularly well on e-ink devices. The medium weight has been chosen specifically for improved rendering on the X4/X3.
+1. Download or clone this repository.
+2. Double-click `Install-FrotzX3.cmd`.
+3. Choose **Download a fresh CrossInk and install FrotzX3**.
+4. Follow the guided installer.
 
-The UI now uses [Inter](https://fonts.google.com/specimen/Inter) as the display font which has improved readability at smaller sizes.
+The installer can:
 
-### Emojis and Misc Glyphs
+- Download a fresh CrossInk source tree.
+- Check whether the CrossInk version is compatible.
+- Apply the small X3 input compatibility change when needed.
+- Install FrotzX3.
+- Build the firmware.
+- Optionally flash a connected XTEINK X3.
 
-- Support for a limited set of Unicode [Emoticons](https://unicode-explorer.com/b/1F600) and [Miscellaneous Symbols](https://unicode-explorer.com/b/2600) using [Noto Emoji](https://fonts.google.com/noto/specimen/Noto+Emoji) and [Noto Sans Symbols](https://fonts.google.com/noto/specimen/Noto+Sans+Symbols) font.
+Your original known-good FrotzX3 source folder is not modified.
 
----
-
-### Font Sizes
-
-CrossInk includes 10 pt, 12 pt, 14 pt, and 16 pt built-in reader font sizes.
-
-See [SD Card Fonts](./docs/sd-card-fonts.md) for installing additional font families and size ranges.
-
----
-
-### Reader features
-
-Reader Options, Bionic Reading, Guide Dots, Force Paragraph Indents, reading stats, and finished-book behavior are documented in [Reader Features](./docs/reader-features.md).
-
-### Custom button actions
-
-CrossInk adds configurable button shortcuts.
-
-See [Controls](./docs/controls.md) for the full action list and defaults.
+For detailed installer information, see [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md).
 
 ---
 
-## Tips for the best reading experience
+## What FrotzX3 Can Do
 
-CrossInk runs on an ESP32-C3 with limited RAM, so very large folders or complex EPUBs can be slower than they would be on a phone, tablet, or desktop app.
+FrotzX3 currently includes:
 
-- Keep folders under about 200 files. For the smoothest browsing, aim for 50-100 files per folder.
-- Having 1000+ books on the SD card is fine if they are split into smaller folders, such as by author, series, genre, or read/unread status.
-- Avoid putting every book in the SD card root. The file browser has to scan and sort the current folder before it can show it.
-- Text-first EPUBs are the best fit. Large image-heavy EPUBs, scanned books, comics, and omnibus files with thousands of sections may load slowly or fail under memory pressure.
-- As a rough target, EPUBs under 20 MB tend to work the best. Files over 50 MB may still work, but they are more likely to be slow or memory-sensitive, especially if they contain many large images.
-- If an EPUB is unusually slow, try [optimizing](./docs/webserver.md#epub-optimization) it with the built-in web optimizer (via File Transfer) before copying it to the SD card: remove unused high-resolution images, split very large omnibus files, and avoid embedding multiple full font families when possible.
-- Use a reliable SD card and leave some free space. CrossInk stores settings, reading progress, cache files, stats, and generated book data on the card.
+- Real Frotz Z-machine interpreter integration.
+- Z3, Z5, and Z8 story support.
+- Game picker for story files stored on the SD card.
+- Resume and New Game startup choices.
+- Automatic save / recovery support.
+- Manual save slots and named saves.
+- Rewind checkpoints.
+- Adventure Log with rewind integration.
+- Native X3 command entry.
+- T9-style keyboard input.
+- Autocomplete and context-aware word suggestions.
+- Inventory-aware command suggestions.
+- Context-sensitive object/action menus.
+- Quick-command menus.
+- Compass-style movement menu including diagonals, up, and down.
+- Parser feedback integration.
+- Z-machine status-line handling.
+- Transcript pagination.
+- Long-press page navigation.
+- Numeric input support for in-game menus.
+- Single-key input support for games that use `READ_CHAR`.
+- Clean exit and re-entry without restarting the entire device.
 
-## Development Device Simulator
-
-The [device simulator](https://github.com/uxjulia/crossink-simulator) renders the e-ink display in an SDL2 window so firmware changes can be sanity-checked without flashing hardware.
-
-See [Simulator](./docs/simulator.md) for setup, platform notes, keyboard controls, and cache tips.
+The goal is not merely to make Frotz run on the X3, but to make interactive fiction feel like a native X3 application.
 
 ---
 
-## Installation
+## Tested Games
 
-The fastest way to install Crossink is by using Inky, Crossink's web companion app: https://inky.crossink.dev/#flash-tools
+Development and testing have included:
 
-Download a `firmware-*.bin` from the [releases page](https://github.com/uxjulia/CrossInk/releases), then flash it with the web installer or command line.
+- **Zork I** — Z3
+- **Zork I** — Z5
+- **Planetfall** — Z5
+- **Lost Pig** — Z8
+- **FrotzX3 Test Lab / PunyInform test story**
+- Additional Z-machine test stories
 
-See [Installation](./docs/installation.md) for step-by-step flashing and revert instructions.
+Z3, Z5, and Z8 have all been physically tested on the XTEINK X3.
+
+Z6 graphics-focused games are not currently a primary target.
+
+---
+
+## Tested Hardware
+
+FrotzX3 has been developed and physically tested on:
+
+- **XTEINK X3**
+
+CrossInk itself may support additional devices, but those should not be considered tested FrotzX3 targets unless explicitly documented here.
+
+---
+
+## Screenshots
+
+Screenshots and device photos coming soon.
+
+---
+
+## SD Card Layout
+
+Place Z-machine story files in:
+
+```text
+/adventures/
+```
+
+For example:
+
+```text
+/adventures/zork1.z3
+/adventures/Planetfall.z5
+/adventures/LostPig.z8
+```
+
+FrotzX3 manages save data under:
+
+```text
+/adventures/saves/
+```
+
+including manual saves and rewind checkpoints.
+
+The game picker recognizes Z-machine story files from `.z3` through `.z8`.
+
+---
+
+## FrotzX3 Controls
+
+FrotzX3 is designed specifically around the X3's limited physical controls.
+
+The interface includes:
+
+- Native menu navigation.
+- T9-style text entry.
+- Context-aware command suggestions.
+- Quick actions for common interactive-fiction verbs.
+- Directional movement menu.
+- Long-press actions where useful.
+- Transcript paging designed for e-ink refresh behavior.
+
+The exact controls may evolve as the interface continues to be refined.
+
+---
+
+## Installing Into Future CrossInk Releases
+
+One of the goals of FrotzX3 is to remain reasonably portable across future CrossInk releases.
+
+The guided installer handles the normal migration process.
+
+For developers or manual integration, see [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md).
+
+The FrotzX3-specific source is primarily contained in:
+
+```text
+lib/FrotzX3/
+src/activities/frotzx3/
+```
+
+Only a small amount of CrossInk host integration is required outside those directories.
+
+---
+
+## Advanced Installation
+
+The beginner-friendly installer is:
+
+```text
+Install-FrotzX3.cmd
+```
+
+Advanced users can directly use the PowerShell backend:
+
+```text
+tools/Install-FrotzX3.ps1
+```
+
+The backend supports compatibility checking, dry runs, existing installations, backups, building, and other migration options.
+
+See [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md).
+
+---
+
+## Building Manually
+
+CrossInk uses PlatformIO.
+
+From the repository root:
+
+```powershell
+pio run -e default
+```
+
+If `pio` is not on your PATH:
+
+```powershell
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e default
+```
+
+To upload using PlatformIO:
+
+```powershell
+pio run -e default -t upload
+```
+
+The guided installer can perform the build and optionally the upload for you.
+
+---
+
+## Project Goals
+
+FrotzX3 prioritizes:
+
+1. Stability.
+2. Z-machine compatibility.
+3. Reliable save and restore.
+4. Performance on the ESP32-C3.
+5. Comfortable X3 controls.
+6. Interactive-fiction quality-of-life features.
+7. Portability to future CrossInk releases.
+
+The X3 has limited RAM, so changes are intentionally conservative with memory usage.
+
+A successful compile is not considered sufficient validation; physical-device testing is the authoritative test.
+
+---
+
+## Current Limitations
+
+- FrotzX3 is currently tested only on the XTEINK X3.
+- Z6 graphics are not a primary supported use case.
+- Some unusual games may expose interpreter or UI behavior that has not yet been tested.
+- Future CrossInk releases may occasionally require a small compatibility update.
+- The Windows guided installer currently expects the required development tools to already be available; automatic prerequisite installation may be added later.
+- No commercial or copyrighted story files are distributed with this project.
+
+---
+
+## About CrossInk
+
+FrotzX3 is built on [CrossInk](https://github.com/uxjulia/CrossInk), an open-source firmware project for e-ink devices including the XTEINK family.
+
+CrossInk provides the underlying:
+
+- Device support.
+- Display rendering.
+- Input handling.
+- SD-card access.
+- Activity/application framework.
+- Power management.
+- Firmware infrastructure.
+
+FrotzX3 adds the Z-machine interpreter, interactive-fiction UI, save systems, command helpers, and related integration on top of that foundation.
+
+For general CrossInk documentation, visit the [upstream CrossInk project](https://github.com/uxjulia/CrossInk).
+
+---
+
+## About Frotz
+
+[Frotz](https://github.com/DavidGriffith/frotz) is a long-running open-source interpreter for Infocom-style Z-machine interactive fiction.
+
+FrotzX3 includes modified Frotz-derived source adapted for the XTEINK X3 / CrossInk environment.
+
+The modifications include platform integration, storage handling, lifecycle support, save/restore integration, memory behavior suitable for the ESP32-C3, and APIs used by the native X3 interface.
+
+---
+
+## Licensing
+
+This repository contains code under multiple compatible open-source licenses.
+
+### CrossInk
+
+CrossInk is distributed under the **MIT License**.
+
+The original CrossInk license and copyright notices are retained.
+
+### Frotz
+
+Frotz-derived code is distributed under the **GNU General Public License, version 2 or later (GPL-2.0-or-later)**.
+
+Original Frotz copyright and license notices are retained.
+
+### FrotzX3 distribution
+
+Because FrotzX3 includes GPL-covered Frotz-derived code, redistribution of firmware or combined source containing FrotzX3 must comply with the applicable GPL terms.
+
+If you redistribute compiled firmware containing FrotzX3, the corresponding source used to build that firmware should also be made available as required by the GPL.
+
+For full details, see:
+
+- [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md)
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- [LICENSES/](LICENSES/)
+
+The root [LICENSE](LICENSE) remains the original CrossInk MIT license and should not be interpreted as relicensing GPL-covered Frotz code.
+
+---
+
+## Game Files and Copyright
+
+FrotzX3 does **not** include Zork, Planetfall, Lost Pig, or any other game/story file.
+
+Users are responsible for obtaining and using story files legally.
+
+The fact that Frotz is open-source does not imply that every game playable with Frotz is freely redistributable.
 
 ---
 
 ## Documentation
 
-- [User Guide](./docs/user-guide.md)
-- [Installation](./docs/installation.md)
-- [SD Card Fonts](./docs/sd-card-fonts.md)
-- [Reader Features](./docs/reader-features.md)
-- [Dictionary](./docs/dictionary.md)
-- [Controls](./docs/controls.md)
-- [Simulator](./docs/simulator.md)
-- [Data Cache](./docs/data-cache.md)
-- [Web server usage](./docs/webserver.md)
-- [Web server endpoints](./docs/webserver-endpoints.md)
-- [Common issues](./docs/troubleshooting.md)
-- [Project scope](./SCOPE.md)
-- [Development docs](./docs/development/README.md)
+FrotzX3 documentation:
+
+- [FrotzX3 Public README](FROTZX3_README.md)
+- [Guided Installer](FROTZX3_INSTALLER_README.md)
+- [Integration / Porting Guide](FROTZX3_INTEGRATION.md)
+- [Licensing](FROTZX3_LICENSE.md)
+- [Third-Party Notices](THIRD_PARTY_NOTICES.md)
+
+CrossInk documentation remains available under `docs/` and from the upstream CrossInk project.
 
 ---
 
-## Development quick start
+## Development
 
-CrossInk uses PlatformIO for building and flashing firmware.
+FrotzX3 is a hobby/open-source project built for the fun of making the XTEINK X3 a genuinely good interactive-fiction device.
 
-See [Getting Started](./docs/development/getting-started.md) for prerequisites, clone setup, and validation commands.
+Bug reports, compatibility findings, and testing reports are welcome.
 
-### Nix/NixOS
+When reporting a problem, it is especially useful to include:
 
-Nix/NixOS users can enter the development shell with either `nix develop` (flakes) or `nix-shell`:
-
-```bash
-nix develop -f nix
-# or
-nix-shell nix
-```
-
-To flash a connected ESP32-C3 device, enable PlatformIO's udev rules in your NixOS configuration:
-
-```nix
-services.udev.packages = with pkgs; [ platformio-core.udev ];
-```
-
-After rebuilding the system configuration, reconnect the device or reload udev rules.
-
-### Build / flash / monitor
-
-Connect your Xteink X4 or X3 via USB-C and run:
-
-```sh
-pio run -e default --target upload
-```
-
-Use `-e sticky` only when building for a Seeed Sticky device. The X3/X4 firmware uses the default environment.
-
-See [Testing and Debugging](./docs/development/testing-debugging.md) for serial logging, simulator checks, static analysis, and bug-report guidance.
+- Story filename and Z-machine version.
+- What action triggered the problem.
+- Whether the game was newly started or resumed.
+- Whether save/restore was involved.
+- Serial logs if available.
+- CrossInk/FrotzX3 version or commit.
 
 ---
 
-## Repository layout
+## Credits
 
-- `src/` - app orchestration, settings/state, and activity implementations (home, reader, settings, network, boot/sleep)
-- `lib/` - supporting libraries: EPUB parsing/layout, fonts, i18n, filesystem helpers, HAL wrappers, and more
-- `freeink-sdk/` - hardware SDK submodule for display, input, storage, and battery (docs: https://freeink.org/docs)
-- `web/` - web portal sources (`templates/`, `pages/`, `assets/`); compiled by `scripts/build_web.py` into `src/network/html/*.generated.h`
-- `docs/` - user and developer documentation, published via the `site/` Astro site
-- `site/` - Astro project that builds `docs/` into the CrossInk documentation website
-- `test/` - unit tests and EPUB test fixtures
-- `scripts/` - build, codegen, and release tooling (i18n generation, web asset building, hyphenation tries, release packaging, etc.)
-- `bin/` - helper scripts for formatting (`clang-format-fix`) and CI checks
-- `fs_/` - sample SD card contents (books, sleep images, themes) used by the simulator
-- `nix/` - Nix/NixOS development shell definitions
-- `managed_components/` - ESP-IDF managed component dependencies, fetched automatically during build
-- [`SCOPE.md`](./SCOPE.md), [`GOVERNANCE.md`](./GOVERNANCE.md), [`CHANGELOG.md`](./CHANGELOG.md) - project scope, community principles, and release history
+FrotzX3 would not exist without the work of:
 
-## Internals
+- The **CrossInk** developers and contributors.
+- The **Frotz** developers and contributors.
+- The broader interactive-fiction community.
+- The open-source tools and libraries used by both projects.
 
-The ESP32-C3 has about 380 KB of usable RAM, so CrossInk stores reusable book and device data on the SD card instead of rebuilding everything in memory.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSES/](LICENSES/) for formal attribution.
 
-See [Data Cache](./docs/data-cache.md) for the `.crosspoint` layout and [File Formats](./docs/file-formats.md) for binary cache details.
+---
 
-## Notice on Contributions
+## Status
 
-This repository does not accept pull requests. Feature requests may be opened in [discussions](https://github.com/uxjulia/CrossInk/discussions), but major features requiring ongoing support should be directed upstream to [CrossPoint](https://github.com/crosspoint-reader/crosspoint-reader).
+FrotzX3 is under active hobby development.
+
+The core text-adventure experience — including real Z-machine execution, Z3/Z5/Z8 support, saves, rewind, command entry, parser integration, and X3-native controls — is working on physical XTEINK X3 hardware.
+
+Expect continued polish, compatibility testing, and quality-of-life improvements.
