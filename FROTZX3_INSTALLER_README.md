@@ -24,6 +24,15 @@ The wizard keeps the advanced backend below unchanged. Its only additional sourc
 
 ## Advanced command-line workflow
 
+For redistribution after installation, follow the
+[license packaging instructions](FROTZX3_INTEGRATION.md#licensing-and-release-packaging).
+The installer does not automatically copy the top-level license documents.
+CrossInk (MIT) and Frotz (GPL-2.0-or-later) remain separate upstream projects;
+FrotzX3 includes modified Frotz source under GPL obligations. No game files are
+bundled; users must supply legally obtained stories. Retain license/notice files
+when redistributing source or firmware and provide matching corresponding source
+for binaries as explained in [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md).
+
 This Windows PowerShell installer copies the tested FrotzX3 app into a **separate** CrossInk source checkout. It can add the Home menu integration when the destination matches the supported layout. It does not flash your device, edit `main.cpp`, or automatically change input behavior.
 
 ## Keep two separate folders

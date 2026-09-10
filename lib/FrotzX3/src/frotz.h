@@ -5,6 +5,10 @@
  *
  */
 
+/* Modified for the FrotzX3 CrossInk port; notice added 2026-09-10.
+ * Earlier functional changes predate this notice. See ../README.md.
+ */
+
 #ifndef FROTZ_H_
 #define FROTZ_H_
 

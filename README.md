@@ -1,3 +1,12 @@
+# FrotzX3 distribution
+
+Start with the [FrotzX3 public README](FROTZX3_README.md) for installation,
+features, and tested-device limits. This distribution includes GPL-2.0-or-later
+Frotz-derived code alongside MIT-licensed CrossInk; see
+[licensing](FROTZX3_LICENSE.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
+No games are included. The CrossInk description below is retained for upstream
+context; its device list is not a FrotzX3 testing claim.
+
 > **This is a personal fork of [CrossPoint Reader](https://github.com/crosspoint-reader/crosspoint-reader)** with a focus on improved fonts and minimal reading stats.
 
 ### Supported Devices

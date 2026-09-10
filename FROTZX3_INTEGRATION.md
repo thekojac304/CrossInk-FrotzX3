@@ -4,6 +4,9 @@ FrotzX3 is a source package compiled into CrossInk, not a separately installed r
 
 ## Files to copy
 
+Also follow [Licensing and release packaging](#licensing-and-release-packaging)
+before redistributing the resulting source or firmware.
+
 - Entire `lib/FrotzX3/`, including `library.json`, all modified interpreter sources, and `src/FrotzX3Paths.h`.
 - Entire `src/activities/frotzx3/`, currently `FrotzX3Activity.cpp` and `FrotzX3Activity.h`.
 - This document for future maintenance.
@@ -111,3 +114,23 @@ The app ensures the save directories exist. Keep story filenames, save filenames
 - [ ] Test intentional sleep/wake and automatic sleep against the known-good device behavior, including recovery and any host Home gesture.
 
 Do not treat a portability transplant as permission to change interpreter, input, task, allocation, or save behavior. Investigate differences against the tested checkpoint before expanding scope.
+
+## Licensing and release packaging
+
+CrossInk and Frotz remain separate upstream projects. CrossInk is MIT licensed;
+FrotzX3 redistributes modified Frotz source under GPL-2.0-or-later obligations.
+See [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md) and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The installer copies the app directories and this guide, but does not copy the
+top-level licensing documents. Before redistributing the destination source or
+firmware, manually include `FROTZX3_LICENSE.md`, `THIRD_PARTY_NOTICES.md`,
+`FROTZX3_README.md`, and the complete `LICENSES/` directory from this package.
+Preserve the destination's original `LICENSE` and all dependency notices. If
+license documents already exist, retain both projects' notices rather than
+overwriting them.
+
+For prebuilt firmware, provide the complete matching corresponding source using
+a method permitted by the applicable GPL terms; follow the licensing guide.
+No game/story files are bundled. Users must supply legally obtained Z-machine
+stories; the software licenses grant no rights to redistribute commercial games.

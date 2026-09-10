@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Changed
+
+- Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled.
+
 ## [v1.5.0] - 2026-08-08
 
 ### Added
