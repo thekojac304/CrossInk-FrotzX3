@@ -1,4 +1,5 @@
 #include "FrotzX3.h"
+#include "FrotzX3Paths.h"
 
 #include <cstdio>
 #include <cstring>
@@ -749,7 +750,7 @@ LOG_INF(
 );
 
 Storage.ensureDirectoryExists(
-    "/adventures/saves"
+    FROTZX3_SAVES_DIR
 );
 
 LOG_INF(
@@ -769,7 +770,7 @@ if (filename != nullptr) {
 snprintf(
     gFrotzResumePath,
     sizeof(gFrotzResumePath),
-    "/adventures/saves/%s.sav",
+    FROTZX3_SAVES_DIR "/%s.sav",
     filename
 );
 

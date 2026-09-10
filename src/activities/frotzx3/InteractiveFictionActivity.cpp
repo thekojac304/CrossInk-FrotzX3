@@ -14,6 +14,7 @@
 #include <Logging.h>
 
 #include <FrotzX3.h>
+#include <FrotzX3Paths.h>
 
 extern "C" {
 void frotz_debug_visible_objects(
@@ -155,7 +156,7 @@ static char gPendingAdventureLogCommand[64] = {};
 static int gPendingAdventureLogCheckpointSlot = -1;
 
 static char gSelectedStoryPath[256] =
-    "/adventures/lostpig.z8";
+    FROTZX3_STORIES_DIR "/lostpig.z8";
 
 static bool gFrotzStoryLoaded = false;
 static const char* gFrotzLastError = "";
@@ -372,7 +373,7 @@ bool selectedGameHasResumeSave() {
   snprintf(
       savePath,
       sizeof(savePath),
-      "/adventures/saves/%s.sav",
+      FROTZX3_SAVES_DIR "/%s.sav",
       gGameFilenames[gGamePickerIndex]);
 
   return Storage.exists(savePath);
@@ -397,7 +398,7 @@ bool selectedGameHasManualSave() {
     snprintf(
         path,
         sizeof(path),
-        "/adventures/saves/manual/%s.manual%d.sav",
+        FROTZX3_MANUAL_SAVES_DIR "/%s.manual%d.sav",
         gGameFilenames[gGamePickerIndex],
         slot + 1);
 
@@ -426,7 +427,7 @@ void buildRecoveryMarkerPathForFilename(
   snprintf(
       path,
       pathSize,
-      "/adventures/saves/%s.recovery",
+      FROTZX3_SAVES_DIR "/%s.recovery",
       filename);
 }
 
@@ -555,7 +556,7 @@ bool selectedGameHasRecoverySave(
   snprintf(
       rewindPath,
       sizeof(rewindPath),
-      "/adventures/saves/rewind/%s.rewind%d.sav",
+      FROTZX3_REWIND_SAVES_DIR "/%s.rewind%d.sav",
       gGameFilenames[gGamePickerIndex],
       slot + 1);
 
@@ -657,13 +658,13 @@ void clearCurrentRecoveryMarker() {
 void migrateSaveLayout() {
 
   Storage.ensureDirectoryExists(
-      "/adventures/saves");
+      FROTZX3_SAVES_DIR);
 
   Storage.ensureDirectoryExists(
-      "/adventures/saves/manual");
+      FROTZX3_MANUAL_SAVES_DIR);
 
   Storage.ensureDirectoryExists(
-      "/adventures/saves/rewind");
+      FROTZX3_REWIND_SAVES_DIR);
 
   for (int gameIndex = 0;
        gameIndex < gGameCount;
@@ -682,14 +683,14 @@ void migrateSaveLayout() {
       snprintf(
           oldPath,
           sizeof(oldPath),
-          "/adventures/saves/%s.manual%d.sav",
+          FROTZX3_SAVES_DIR "/%s.manual%d.sav",
           filename,
           slot + 1);
 
       snprintf(
           newPath,
           sizeof(newPath),
-          "/adventures/saves/manual/%s.manual%d.sav",
+          FROTZX3_MANUAL_SAVES_DIR "/%s.manual%d.sav",
           filename,
           slot + 1);
 
@@ -712,14 +713,14 @@ void migrateSaveLayout() {
       snprintf(
           oldPath,
           sizeof(oldPath),
-          "/adventures/saves/%s.rewind%d.sav",
+          FROTZX3_SAVES_DIR "/%s.rewind%d.sav",
           filename,
           slot + 1);
 
       snprintf(
           newPath,
           sizeof(newPath),
-          "/adventures/saves/rewind/%s.rewind%d.sav",
+          FROTZX3_REWIND_SAVES_DIR "/%s.rewind%d.sav",
           filename,
           slot + 1);
 
@@ -762,7 +763,7 @@ void buildManualSavePath(
   snprintf(
       path,
       pathSize,
-      "/adventures/saves/manual/%s.manual%d.sav",
+      FROTZX3_MANUAL_SAVES_DIR "/%s.manual%d.sav",
       filename,
       slotIndex + 1);
 }
@@ -910,7 +911,7 @@ void buildRewindSavePath(
   snprintf(
       path,
       pathSize,
-      "/adventures/saves/rewind/%s.rewind%d.sav",
+      FROTZX3_REWIND_SAVES_DIR "/%s.rewind%d.sav",
       filename,
       checkpointSlot + 1);
 }
@@ -1344,14 +1345,14 @@ void scanGames() {
       "--- FROTZ GAME SCAN ---");
 
   HalFile directory =
-      Storage.open("/adventures");
+      Storage.open(FROTZX3_STORIES_DIR);
 
   if (!directory ||
       !directory.isDirectory()) {
 
     LOG_ERR(
         "FROTZ",
-        "Could not open /adventures");
+        "Could not open " FROTZX3_STORIES_DIR);
 
     directory.close();
     return;
@@ -3698,7 +3699,7 @@ void prepareSelectedStoryForLaunch() {
   snprintf(
       gSelectedStoryPath,
       sizeof(gSelectedStoryPath),
-      "/adventures/%s",
+      FROTZX3_STORIES_DIR "/%s",
       gGameFilenames[gGamePickerIndex]);
 
   gFrotzBootOutput[0] = '\0';
@@ -3877,7 +3878,7 @@ void InteractiveFictionActivity::loop() {
       snprintf(
           gSelectedStoryPath,
           sizeof(gSelectedStoryPath),
-          "/adventures/%s",
+          FROTZX3_STORIES_DIR "/%s",
           gGameFilenames[gGamePickerIndex]);
 
       gRecoveryPromptActive = false;
@@ -4019,7 +4020,7 @@ void InteractiveFictionActivity::loop() {
         snprintf(
             gSelectedStoryPath,
             sizeof(gSelectedStoryPath),
-            "/adventures/%s",
+            FROTZX3_STORIES_DIR "/%s",
             gGameFilenames[gGamePickerIndex]);
 
         if (gRecoveryPromptIndex == 0) {
@@ -4130,7 +4131,7 @@ void InteractiveFictionActivity::loop() {
         snprintf(
             gSelectedStoryPath,
             sizeof(gSelectedStoryPath),
-            "/adventures/%s",
+            FROTZX3_STORIES_DIR "/%s",
             gGameFilenames[gGamePickerIndex]);
 
         int choiceIndex = 0;
