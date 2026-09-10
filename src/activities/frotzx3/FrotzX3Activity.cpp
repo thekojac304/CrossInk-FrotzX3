@@ -1,4 +1,4 @@
-#include "InteractiveFictionActivity.h"
+#include "FrotzX3Activity.h"
 
 #include <cstdio>
 #include <cstring>
@@ -3736,7 +3736,7 @@ void armDeferredPickerAction(
 }
 
 
-void InteractiveFictionActivity::onEnter() {
+void FrotzX3Activity::onEnter() {
 scanGames();
 migrateSaveLayout();
 gFrotzBootOutput[0] = '\0';
@@ -3844,7 +3844,7 @@ gFrotzLastError = "";
 // INPUT
 // ==================================================
 
-void InteractiveFictionActivity::loop() {
+void FrotzX3Activity::loop() {
 
   /*
    * GAME PICKER / STARTUP LAUNCH EXECUTION
@@ -5092,7 +5092,7 @@ if (mappedInput.wasPressed(
 // NORMAL MENU NAVIGATION
 // ==================================================
 
-void InteractiveFictionActivity::moveSelection(int delta) {
+void FrotzX3Activity::moveSelection(int delta) {
 
   if (currentMenu == Menu::Main &&
       gParserChoiceActive) {
@@ -5195,7 +5195,7 @@ case Menu::Open:
 // SINGLE-KEY INPUT
 // ==================================================
 
-int InteractiveFictionActivity::getSingleKeyItemCount() const {
+int FrotzX3Activity::getSingleKeyItemCount() const {
 
   switch (singleKeyScreen) {
 
@@ -5222,7 +5222,7 @@ int InteractiveFictionActivity::getSingleKeyItemCount() const {
 }
 
 
-void InteractiveFictionActivity::moveSingleKeySelection(
+void FrotzX3Activity::moveSingleKeySelection(
     int delta) {
 
   const int itemCount =
@@ -5246,7 +5246,7 @@ void InteractiveFictionActivity::moveSingleKeySelection(
 }
 
 
-void InteractiveFictionActivity::submitSingleKeyValue(
+void FrotzX3Activity::submitSingleKeyValue(
     int key) {
 
   const unsigned char keyByte =
@@ -5284,7 +5284,7 @@ void InteractiveFictionActivity::submitSingleKeyValue(
 }
 
 
-void InteractiveFictionActivity::activateSingleKeySelection() {
+void FrotzX3Activity::activateSingleKeySelection() {
 
   switch (singleKeyScreen) {
 
@@ -5408,7 +5408,7 @@ void InteractiveFictionActivity::activateSingleKeySelection() {
 // NORMAL COMMANDS
 // ==================================================
 
-void InteractiveFictionActivity::activateSelection() {
+void FrotzX3Activity::activateSelection() {
 
   if (currentMenu == Menu::Main &&
       gParserChoiceActive &&
@@ -6009,7 +6009,7 @@ case Menu::Open:
 // BACK
 // ==================================================
 
-void InteractiveFictionActivity::goBack() {
+void FrotzX3Activity::goBack() {
 
   if (currentMenu == Menu::Main &&
       FrotzX3::waitingForKeyInput() &&
@@ -6142,7 +6142,7 @@ if (currentMenu == Menu::Main) {
 // OPEN KEYBOARD
 // ==================================================
 
-void InteractiveFictionActivity::openKeyboard() {
+void FrotzX3Activity::openKeyboard() {
 
   /*
    * Remember where the keyboard was opened from before
@@ -6214,7 +6214,7 @@ void InteractiveFictionActivity::openKeyboard() {
 // KEYBOARD NAVIGATION
 // ==================================================
 
-void InteractiveFictionActivity::moveKeyboard(int delta) {
+void FrotzX3Activity::moveKeyboard(int delta) {
 
   int itemCount = 0;
 
@@ -6258,7 +6258,7 @@ void InteractiveFictionActivity::moveKeyboard(int delta) {
 // KEYBOARD SELECT
 // ==================================================
 
-void InteractiveFictionActivity::activateKeyboardKey() {
+void FrotzX3Activity::activateKeyboardKey() {
 
   if (keyboardMode == KeyboardMode::Groups) {
 
@@ -6394,7 +6394,7 @@ void InteractiveFictionActivity::activateKeyboardKey() {
 // AUTOCOMPLETE
 // ==================================================
 
-int InteractiveFictionActivity::getSuggestionCount() const {
+int FrotzX3Activity::getSuggestionCount() const {
 
   int count = 0;
 
@@ -6413,7 +6413,7 @@ int InteractiveFictionActivity::getSuggestionCount() const {
 }
 
 const char*
-InteractiveFictionActivity::getSuggestion(
+FrotzX3Activity::getSuggestion(
     int index) const {
 
   if (typedCommand[0] == '\0') {
@@ -6601,7 +6601,7 @@ InteractiveFictionActivity::getSuggestion(
   return nullptr;
 }
 
-void InteractiveFictionActivity::acceptSuggestion() {
+void FrotzX3Activity::acceptSuggestion() {
 
   const char* suggestion =
       getSuggestion(suggestionIndex);
@@ -6628,7 +6628,7 @@ void InteractiveFictionActivity::acceptSuggestion() {
 // SUBMIT TYPED COMMAND
 // ==================================================
 
-void InteractiveFictionActivity::submitTypedCommand() {
+void FrotzX3Activity::submitTypedCommand() {
 
   if (typedCommand[0] == '\0') {
     return;
@@ -6784,7 +6784,7 @@ const bool requestsInventory =
 // RENDER
 // ==================================================
 
-void InteractiveFictionActivity::render(
+void FrotzX3Activity::render(
     RenderLock&&) {
 
   const auto pageWidth =

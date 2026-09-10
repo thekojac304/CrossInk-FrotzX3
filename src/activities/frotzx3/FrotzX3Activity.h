@@ -2,9 +2,9 @@
 
 #include "activities/Activity.h"
 
-class InteractiveFictionActivity final : public Activity {
+class FrotzX3Activity final : public Activity {
  public:
-  explicit InteractiveFictionActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
+  explicit FrotzX3Activity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("FrotzX3", renderer, mappedInput) {}
 
   void onEnter() override;

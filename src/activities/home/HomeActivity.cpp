@@ -25,7 +25,7 @@
 #include "../reader/EpubReaderUtils.h"
 #include "BookmarkStore.h"
 #include "ClippingStore.h"
-#include "../frotzx3/InteractiveFictionActivity.h"
+#include "../frotzx3/FrotzX3Activity.h"
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
@@ -1661,7 +1661,7 @@ void HomeActivity::loop() {
         break;
       case HomeMenuAction::InteractiveFiction:
         activityManager.pushActivity(
-            std::make_unique<InteractiveFictionActivity>(renderer, mappedInput));
+            std::make_unique<FrotzX3Activity>(renderer, mappedInput));
         break;  
       case HomeMenuAction::FileTransfer:
         onFileTransferOpen();
