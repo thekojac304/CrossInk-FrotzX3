@@ -89,6 +89,7 @@ static char frotzOutput[FROTZ_OUTPUT_SIZE];
 static unsigned int frotzOutputLength = 0;
 
 extern void frotz_debug_log(const char *message);
+extern void frotz_error_log(const char *message);
 
 static void frotz_output_clear(void)
 {
@@ -360,7 +361,7 @@ int frotz_try_init_memory(void)
 
         } else {
 
-            frotz_debug_log(
+            frotz_error_log(
                 "init_memory failed with no fatal message"
             );
         }
@@ -541,6 +542,8 @@ void os_fatal(const char *s, ...)
             "Unknown Frotz fatal error"
         );
     }
+
+    frotz_error_log(frotzLastError);
 
     if (frotzJumpActive)
         longjmp(

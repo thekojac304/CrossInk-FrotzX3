@@ -16,17 +16,17 @@ hardware compatibility.
 The picker recognizes `.z3` through `.z8`, listing up to 16 stories. This does
 not promise compatibility with every story or every Z-machine feature.
 
-## Install on Windows
+## Installation - Beta (`v0.9.0-beta.1`)
 
-Download the complete FrotzX3 source folder, keep it together, and double-click
-**Install-FrotzX3.cmd**. The wizard can download a separate CrossInk checkout,
-check compatibility, install FrotzX3, and optionally build and flash an XTEINK
-X3. Git for Windows is required; building also requires PlatformIO.
-Review prompts before approving installation or flashing.
+The installer and firmware distribution mechanism are still being finalized, and
+no prebuilt firmware is published yet. See **Installation - Beta** in the main
+[README](README.md) for the current build-from-source steps.
 
-Read the [installer guide](FROTZX3_INSTALLER_README.md) for prerequisites and
-troubleshooting, or the
-[advanced installer workflow](FROTZX3_INSTALLER_README.md#advanced-command-line-workflow).
+An experimental Windows wizard (**Install-FrotzX3.cmd**) can transplant FrotzX3
+into a separate fresh CrossInk checkout. Git for Windows is required; building
+also requires PlatformIO. Review prompts before approving installation or
+flashing. See the [installer guide](FROTZX3_INSTALLER_README.md) for
+prerequisites and troubleshooting.
 [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md) covers developer integration,
 storage layout, and physical-X3 verification.
 

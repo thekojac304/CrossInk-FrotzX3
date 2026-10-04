@@ -72,8 +72,19 @@ extern "C" {
 
 void frotz_debug_log(const char *message)
 {
+#ifdef FROTZX3_DEBUG_LOG
     if (message != nullptr) {
         LOG_INF("FROTZDBG", "%s", message);
+    }
+#else
+    (void)message;
+#endif
+}
+
+void frotz_error_log(const char *message)
+{
+    if (message != nullptr) {
+        LOG_ERR("FROTZ", "%s", message);
     }
 }
 
@@ -88,7 +99,7 @@ int frotz_hal_take_restore_on_start(void)
     const int result =
         gRestoreOnStart ? 1 : 0;
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZDBG",
         "take_restore_on_start: returning %d",
         result
@@ -569,7 +580,7 @@ void setRestoreOnStart(bool enabled)
 {
     gRestoreOnStart = enabled;
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZDBG",
         "setRestoreOnStart(%d)",
         enabled ? 1 : 0
@@ -609,7 +620,7 @@ bool setRestorePathOnStart(const char* path)
 
 const char* version()
 {
-    return "FrotzX3 0.6.0";
+    return "FrotzX3 0.9.0-beta.1";
 }
 
 
@@ -690,6 +701,12 @@ bool testBootStory(const char* path)
 
 bool startStory(const char* path)
 {
+    LOG_INF(
+        "FROTZSTART",
+        "%s",
+        version()
+    );
+
     LOG_INF(
         "FROTZSTART",
         "startStory ENTER path=%s taskActive=%d running=%d",
@@ -1301,13 +1318,13 @@ int getCurrentRoomObjects(
 
 const char* output()
 {
+#ifdef FROTZX3_DEBUG_LOG
     /*
-     * Temporary Phase-B diagnostic.
+     * Status-line diagnostic.
      *
      * The activity asks for output only after Frotz has reached the next
      * input prompt, which is exactly when the structured V1-V3 status API
-     * is safe to inspect. This lets us validate the API on real hardware
-     * before changing the gameplay header.
+     * is safe to inspect.
      */
     StatusInfo status;
 
@@ -1331,6 +1348,7 @@ const char* output()
             );
         }
     }
+#endif
 
     return frotz_get_output();
 }

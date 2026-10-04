@@ -2,6 +2,7 @@
 
 ### Changed
 
+- FrotzX3 is versioned `0.9.0-beta.1` for its first public beta. Its verbose development diagnostics (per-command timing, object-tree and context-candidate dumps) are now compiled out unless `FROTZX3_DEBUG_LOG` is defined, fatal interpreter errors are always logged, and an unreachable prototype UI block was removed; gameplay behavior is unchanged.
 - Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled.
 
 ## [v1.5.0] - 2026-08-08

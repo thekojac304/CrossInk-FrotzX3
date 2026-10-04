@@ -63,6 +63,13 @@ If the future release already implements equivalent semantics, no input edit is 
 - The actual Frotz task stack is **8192 bytes (8 KB)** in the ESP32 `xTaskCreate()` call. Older comments mentioning 16 KB do not describe the current value.
 - Preserve the existing HAL-backed story/save I/O and modified Quetzal bridge. Available heap and host memory usage must still support the tested stories.
 - Explicit in-app exits save/stop before finishing. `FrotzX3Activity` currently has no `onExit()` override; generic activity destruction alone does not perform Frotz shutdown. Recheck forced navigation and sleep behavior if the host lifecycle changes.
+- Verbose FrotzX3 development diagnostics (per-command timing, object-tree and
+  context-candidate dumps, interpreter trace) are compiled out by default. Add
+  `-DFROTZX3_DEBUG_LOG` to `build_flags` (for example in `platformio.local.ini`)
+  to enable them; the serial log also needs `ENABLE_SERIAL_LOG` and
+  `LOG_LEVEL >= 1`. Startup, load, save/restore, recovery, and fatal interpreter
+  error logs are always available. The current version marker is
+  `FrotzX3::version()` (also `lib/FrotzX3/library.json`).
 - **Physical XTEINK X3 testing is authoritative.** A successful build or simulator run does not establish input, SD, memory, or save compatibility on the device.
 
 ## Storage and SD layout

@@ -1,5 +1,22 @@
 #pragma once
 
+/*
+ * Verbose FrotzX3 development diagnostics (per-command timing, object-tree
+ * and context-candidate dumps, interpreter trace).  Compiled out by default
+ * so they neither add serial traffic nor evict useful lines from the crash
+ * log ring buffer.  Enable with -DFROTZX3_DEBUG_LOG in build_flags (also
+ * needs ENABLE_SERIAL_LOG and LOG_LEVEL >= 1).  Release diagnostics
+ * (startup, load, save/restore, recovery and fatal interpreter errors) use
+ * LOG_INF / LOG_ERR directly and are not affected.
+ */
+#ifdef FROTZX3_DEBUG_LOG
+#define FROTZX3_LOG_DEBUG(origin, format, ...) LOG_INF(origin, format, ##__VA_ARGS__)
+#else
+#define FROTZX3_LOG_DEBUG(origin, format, ...) \
+  do {                                         \
+  } while (0)
+#endif
+
 namespace FrotzX3 {
 
 const char* version();

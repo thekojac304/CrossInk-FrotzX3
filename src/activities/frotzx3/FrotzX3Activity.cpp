@@ -16,6 +16,7 @@
 #include <FrotzX3.h>
 #include <FrotzX3Paths.h>
 
+#ifdef FROTZX3_DEBUG_LOG
 extern "C" {
 void frotz_debug_visible_objects(
     const char* visibleText);
@@ -23,6 +24,7 @@ void frotz_debug_visible_objects(
 void frotz_debug_room_tree(
     const char* visibleText);
 }
+#endif
 
 static constexpr int MAX_GAMES = 16;
 static constexpr int MAX_GAME_FILENAME = 128;
@@ -948,7 +950,7 @@ bool saveRewindCheckpoint(
     return false;
   }
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZTIME",
       "rewind checkpoint BEGIN slot=%d",
       checkpointSlot + 1);
@@ -956,7 +958,7 @@ bool saveRewindCheckpoint(
   const bool success =
       FrotzX3::saveToPath(path);
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZTIME",
       "rewind checkpoint END slot=%d success=%d",
       checkpointSlot + 1,
@@ -2225,7 +2227,7 @@ void extractDisambiguationChoices(
     gParserChoiceActive = true;
     gParserChoiceIndex = 0;
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZPARSER",
         "disambiguation choices: \"%s\" / \"%s\"",
         gParserChoices[0],
@@ -3072,7 +3074,7 @@ void refreshLiveRoomObjectCache(
         refreshedObjects[i]);
   }
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZLIVE",
       "room=\"%s\" cached %d raw room-tree object(s)",
       roomName,
@@ -3282,7 +3284,7 @@ void exposeVisibleLiveObjects(
         commandName,
         sizeof(commandName));
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZLIVE",
         "exposed real object: display=\"%s\" command=\"%s\"",
         object,
@@ -3642,7 +3644,7 @@ void detectContextObjects(
               !noiseWord &&
               dictionaryWord;
 
-          LOG_INF(
+          FROTZX3_LOG_DEBUG(
               "FROTZNOUN",
               "candidate=%s len=%d stop=%d noise=%d dict=%d accepted=%d",
               word,
@@ -3667,7 +3669,7 @@ void detectContextObjects(
     }
   }
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZNOUN",
       "context cache now has %d item(s)",
       gContextObjectCount);
@@ -3676,7 +3678,7 @@ void detectContextObjects(
        i < gContextObjectCount;
        ++i) {
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZNOUN",
         "context[%d]=%s source=%s",
         i,
@@ -4651,7 +4653,7 @@ if (gExitReplacePromptActive) {
       !gFrotzOutputCaptured &&
       FrotzX3::waitingForInput()) {
 
-    LOG_INF(
+    FROTZX3_LOG_DEBUG(
         "FROTZTIME",
         "command response COMPLETE");
 
@@ -4713,7 +4715,7 @@ const ParserFeedbackType parserFeedback =
 if (parserFeedback !=
     ParserFeedbackType::None) {
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZPARSER",
       "type=%s output=\"%.120s\"",
       parserFeedbackTypeName(
@@ -4763,7 +4765,7 @@ if (parserFeedback ==
 
     if (roomChanged) {
 
-      LOG_INF(
+      FROTZX3_LOG_DEBUG(
           "FROTZLIVE",
           "room change: \"%s\" -> \"%s\"",
           gCurrentRoomName[0] != '\0'
@@ -4790,11 +4792,13 @@ if (parserFeedback ==
   detectContextObjects(
       gFrotzBootOutput);
 
+#ifdef FROTZX3_DEBUG_LOG
   /*
    * Diagnostic only for ordinary output.
    */
   frotz_debug_room_tree(
       gFrotzBootOutput);
+#endif
 }
 
 if (gCaptureNextOutputAsInventory) {
@@ -5253,7 +5257,7 @@ void FrotzX3Activity::submitSingleKeyValue(
       static_cast<unsigned char>(
           key & 0xff);
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZKEY",
       "submit single key: 0x%02X",
       static_cast<unsigned int>(
@@ -6707,7 +6711,7 @@ const bool requestsInventory =
     strcmp(commandCopy, "INVENTORY") == 0 ||
     strcmp(commandCopy, "I") == 0;
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZTIME",
       "command submit BEGIN: %s",
       commandCopy);
@@ -6724,7 +6728,7 @@ const bool requestsInventory =
     return;
   }
 
-  LOG_INF(
+  FROTZX3_LOG_DEBUG(
       "FROTZTIME",
       "command submit ACCEPTED: %s",
       commandCopy);
@@ -9014,261 +9018,4 @@ static const char* movementLabels[12] = {
   renderer.displayBuffer();
 
   return;
-
-  /*
-   * OLD PROTOTYPE UI BELOW THIS POINT.
-   * It remains intentionally unreachable for now.
-   */
-
-  if (gFrotzStoryLoaded) {
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        ROOM_TITLE_Y,
-        "FROTZ LOAD SUCCESS",
-        true,
-        EpdFontFamily::BOLD);
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y,
-        "Zork I loaded successfully.",
-        true);
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y + LINE_HEIGHT,
-        "Real Frotz init_memory() completed.",
-        true);
-  } else {
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        ROOM_TITLE_Y,
-        "FROTZ LOAD FAILED",
-        true,
-        EpdFontFamily::BOLD);
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y,
-        gFrotzLastError,
-        true);
-  }
-
-  if (!mailboxOpen) {
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y + LINE_HEIGHT * 3,
-        "There is a small mailbox here.",
-        true);
-
-  } else if (!leafletTaken) {
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y + LINE_HEIGHT * 3,
-        "The mailbox is open. A leaflet is inside.",
-        true);
-
-  } else {
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        BODY_Y + LINE_HEIGHT * 3,
-        "The mailbox is open and empty.",
-        true);
-  }
-
-  if (lastCommand != nullptr) {
-
-    char commandLine[64];
-
-    snprintf(
-        commandLine,
-        sizeof(commandLine),
-        "> %s",
-        lastCommand);
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        HISTORY_Y,
-        commandLine,
-        true,
-        EpdFontFamily::BOLD);
-  }
-
-  if (message != nullptr) {
-
-    drawWrappedText(
-        renderer,
-        LEFT_MARGIN,
-        HISTORY_Y + LINE_HEIGHT + 8,
-        message,
-        MAX_LINE_CHARS,
-        MAX_RESPONSE_LINES);
-  }
-
-  const char* items[5] = {};
-
-  int itemCount = 0;
-
-  switch (currentMenu) {
-
-    case Menu::Main:
-
-      items[0] = "LOOK";
-      items[1] = "GO";
-      items[2] = "TAKE";
-      items[3] = "EXAMINE";
-      items[4] = "TYPE COMMAND";
-
-      itemCount = 5;
-
-      break;
-
-    case Menu::Go:
-
-      items[0] = "NORTH";
-      items[1] = "SOUTH";
-      items[2] = "EAST";
-      items[3] = "WEST";
-
-      itemCount = 4;
-
-      break;
-
-    case Menu::Take:
-
-      if (!mailboxOpen) {
-
-        items[0] = "MAILBOX";
-        itemCount = 1;
-
-      } else if (!leafletTaken) {
-
-        items[0] = "MAILBOX";
-        items[1] = "LEAFLET";
-
-        itemCount = 2;
-
-      } else {
-
-        items[0] = "MAILBOX";
-        itemCount = 1;
-      }
-
-      break;
-
-    case Menu::Examine:
-
-      items[0] = "MAILBOX";
-      items[1] = "HOUSE";
-      items[2] = "DOOR";
-
-      itemCount = 3;
-
-      break;
-
-    case Menu::Mailbox:
-
-      if (!mailboxOpen) {
-
-        items[0] = "OPEN";
-        items[1] = "BACK";
-
-        itemCount = 2;
-
-      } else if (!leafletTaken) {
-
-        items[0] = "TAKE LEAFLET";
-        items[1] = "EXAMINE LEAFLET";
-        items[2] = "BACK";
-
-        itemCount = 3;
-
-      } else {
-
-        items[0] = "EXAMINE";
-        items[1] = "BACK";
-
-        itemCount = 2;
-      }
-
-      break;
-case Menu::Open:
-  break;
-case Menu::GameMenu:
-  break;
-case Menu::AdventureLog:
-  break;
-case Menu::Save:
-  break;
-case Menu::Load:
-  break;
-    case Menu::Keyboard:
-      break;
-  }
-
-  int y = MENU_Y;
-
-  for (int i = 0;
-       i < itemCount;
-       ++i) {
-
-    char line[48];
-
-    if (i == selectedIndex) {
-
-      snprintf(
-          line,
-          sizeof(line),
-          "> %s",
-          items[i]);
-
-    } else {
-
-      snprintf(
-          line,
-          sizeof(line),
-          "  %s",
-          items[i]);
-    }
-
-    renderer.drawText(
-        UI_12_FONT_ID,
-        LEFT_MARGIN,
-        y,
-        line,
-        true,
-        i == selectedIndex
-            ? EpdFontFamily::BOLD
-            : EpdFontFamily::REGULAR);
-
-    y += LINE_HEIGHT;
-  }
-
-  const auto labels =
-      mappedInput.mapLabels(
-          "Back",
-          "Select",
-          "Prev",
-          "Next");
-
-  GUI.drawButtonHints(
-      renderer,
-      labels.btn1,
-      labels.btn2,
-      labels.btn3,
-      labels.btn4);
-
-  renderer.displayBuffer();
 }

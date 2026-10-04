@@ -12,29 +12,44 @@ FrotzX3 is built on top of [CrossInk](https://github.com/uxjulia/CrossInk) and t
 >
 > You must provide your own legally obtained Z-machine story files.
 
+> **Public beta — `v0.9.0-beta.1`.**
+>
+> FrotzX3 works on physical XTEINK X3 hardware, but this is a first public beta.
+> Expect rough edges, and see [Current Limitations](#current-limitations).
+
 ---
 
-## Quick Start
+## Installation — Beta
 
-### Recommended Windows installation
+**The installer and firmware distribution mechanism are still being finalized.**
+No prebuilt firmware is published yet, and the steps below may change between
+beta releases.
 
-1. Download or clone this repository.
-2. Double-click `Install-FrotzX3.cmd`.
-3. Choose **Download a fresh CrossInk and install FrotzX3**.
-4. Follow the guided installer.
+Two paths exist today:
 
-The installer can:
+### Build from source (current reference path)
 
-- Download a fresh CrossInk source tree.
-- Check whether the CrossInk version is compatible.
-- Apply the small X3 input compatibility change when needed.
-- Install FrotzX3.
-- Build the firmware.
-- Optionally flash a connected XTEINK X3.
+Requires [PlatformIO](https://platformio.org/) and Git. The CrossInk firmware
+uses a Git submodule (`freeink-sdk`), so clone with submodules:
 
-Your original known-good FrotzX3 source folder is not modified.
+```powershell
+git clone --recurse-submodules https://github.com/thekojac304/CrossInk-FrotzX3.git
+cd CrossInk-FrotzX3
+pio run -e default
+```
 
-For detailed installer information, see [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md).
+See [Building Manually](#building-manually) for flashing and for running
+PlatformIO when `pio` is not on your PATH. Then copy your story files to the SD
+card as described in [SD Card Layout](#sd-card-layout).
+
+### Guided Windows installer (experimental)
+
+`Install-FrotzX3.cmd` and `tools/Install-FrotzX3.ps1` can transplant FrotzX3 into
+a separate, fresh CrossInk checkout. They are provided as-is while the final
+distribution mechanism is decided, and are not yet the recommended way to
+install. Review each prompt before approving a build or flash. See
+[FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md) for prerequisites and
+details.
 
 ---
 
@@ -47,7 +62,7 @@ FrotzX3 currently includes:
 - Game picker for story files stored on the SD card.
 - Resume and New Game startup choices.
 - Automatic save / recovery support.
-- Manual save slots and named saves.
+- Three manual save slots.
 - Rewind checkpoints.
 - Adventure Log with rewind integration.
 - Native X3 command entry.
@@ -66,6 +81,19 @@ FrotzX3 currently includes:
 - Clean exit and re-entry without restarting the entire device.
 
 The goal is not merely to make Frotz run on the X3, but to make interactive fiction feel like a native X3 application.
+
+---
+
+## Supported Story Versions
+
+- **Z3, Z5, and Z8** are supported and have been physically tested on the XTEINK X3.
+- The game picker also lists `.z4`, `.z6`, and `.z7` files, and the interpreter core
+  accepts Z-code versions 1 through 8, but Z4 and Z7 stories have not been tested on
+  hardware.
+- Z6 (graphical) stories are not a supported target.
+
+Recognition of a file by the picker does not guarantee that every story or
+Z-machine feature works.
 
 ---
 
@@ -118,15 +146,27 @@ For example:
 /adventures/LostPig.z8
 ```
 
-FrotzX3 manages save data under:
+The game picker recognizes Z-machine story files from `.z3` through `.z8`.
+
+## Where Saves Live
+
+FrotzX3 manages all save data under `/adventures/saves/` on the SD card:
 
 ```text
-/adventures/saves/
+/adventures/
+  Story.z5
+  saves/
+    Story.z5.sav                  # automatic resume save
+    Story.z5.recovery             # crash-recovery marker
+    manual/
+      Story.z5.manual1.sav        # manual slots 1-3
+    rewind/
+      Story.z5.rewind<N>.sav      # rewind checkpoints
 ```
 
-including manual saves and rewind checkpoints.
-
-The game picker recognizes Z-machine story files from `.z3` through `.z8`.
+The full story filename, including its extension, forms the save name, so
+renaming a story file starts a new set of saves. Up to 16 stories are listed in
+the picker. FrotzX3 creates the save directories automatically.
 
 ---
 
@@ -150,6 +190,8 @@ The exact controls may evolve as the interface continues to be refined.
 
 ## Installing Into Future CrossInk Releases
 
+> Part of the experimental installer workflow; see [Installation — Beta](#installation--beta).
+
 One of the goals of FrotzX3 is to remain reasonably portable across future CrossInk releases.
 
 The guided installer handles the normal migration process.
@@ -167,9 +209,9 @@ Only a small amount of CrossInk host integration is required outside those direc
 
 ---
 
-## Advanced Installation
+## Advanced Installation (Experimental)
 
-The beginner-friendly installer is:
+The guided Windows installer is:
 
 ```text
 Install-FrotzX3.cmd
@@ -191,7 +233,7 @@ See [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md).
 
 CrossInk uses PlatformIO.
 
-From the repository root:
+From the repository root (after cloning with `--recurse-submodules`):
 
 ```powershell
 pio run -e default
@@ -237,7 +279,9 @@ A successful compile is not considered sufficient validation; physical-device te
 - Z6 graphics are not a primary supported use case.
 - Some unusual games may expose interpreter or UI behavior that has not yet been tested.
 - Future CrossInk releases may occasionally require a small compatibility update.
-- The Windows guided installer currently expects the required development tools to already be available; automatic prerequisite installation may be added later.
+- The installer and firmware distribution mechanism are still being finalized (see [Installation — Beta](#installation--beta)); the Windows guided installer expects the required development tools to already be available.
+- Firmware flash space is nearly full on the X3 (the image uses roughly 97% of the OTA partition), so new features have little headroom.
+- At most 16 story files are listed in the game picker.
 - No commercial or copyrighted story files are distributed with this project.
 
 ---
@@ -341,7 +385,8 @@ When reporting a problem, it is especially useful to include:
 - Whether the game was newly started or resumed.
 - Whether save/restore was involved.
 - Serial logs if available.
-- CrossInk/FrotzX3 version or commit.
+- CrossInk/FrotzX3 version or commit (the serial log prints the FrotzX3 version
+  each time a story starts).
 
 ---
 
@@ -360,7 +405,7 @@ See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSES/](LICENSES/) 
 
 ## Status
 
-FrotzX3 is under active hobby development.
+FrotzX3 `v0.9.0-beta.1` is a first public beta under active hobby development.
 
 The core text-adventure experience — including real Z-machine execution, Z3/Z5/Z8 support, saves, rewind, command entry, parser integration, and X3-native controls — is working on physical XTEINK X3 hardware.
 

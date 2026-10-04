@@ -464,6 +464,7 @@ static void crossink_extract_first_line(
 }
 
 
+#ifdef FROTZX3_DEBUG_LOG
 static void crossink_debug_object_subtree(
     zword object,
     int depth,
@@ -538,6 +539,8 @@ static void crossink_debug_object_subtree(
             crossink_object_sibling(child);
     }
 }
+#endif /* FROTZX3_DEBUG_LOG */
+
 
 
 
@@ -915,6 +918,7 @@ int frotz_get_room_object_names(
 }
 
 
+#ifdef FROTZX3_DEBUG_LOG
 /*
  * frotz_debug_room_tree
  *
@@ -1156,6 +1160,8 @@ void frotz_debug_visible_objects(
         }
     }
 }
+#endif /* FROTZX3_DEBUG_LOG */
+
 
 
 /*
