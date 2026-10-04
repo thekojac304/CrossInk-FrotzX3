@@ -83,17 +83,17 @@ foreach ($line in (Invoke-Git $repo @('submodule', 'status', '--recursive'))) {
 if (-not $subs) { throw 'No submodules found; refusing to build an incomplete bundle.' }
 
 # 4. Export main repo + submodules into a staging directory ----------------
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("frotzx3-src-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 $root = Join-Path $stage $name
 New-Item -ItemType Directory -Path $root | Out-Null
 try {
     function Export-Repo([string]$RepoDir, [string]$Dest) {
         New-Item -ItemType Directory -Force -Path $Dest | Out-Null
-        $tar = Join-Path $stage 'export.tar'
-        Invoke-Git $RepoDir @('archive', '--format=tar', '-o', $tar, 'HEAD') | Out-Null
-        & tar -xf $tar -C $Dest
-        if ($LASTEXITCODE -ne 0) { throw "tar extraction failed for $RepoDir" }
-        Remove-Item $tar
+        $tmp = Join-Path $stage 'export.zip'
+        Invoke-Git $RepoDir @('archive', '--format=zip', '-o', $tmp, 'HEAD') | Out-Null
+        [IO.Compression.ZipFile]::ExtractToDirectory($tmp, $Dest)
+        Remove-Item $tmp
     }
     Export-Repo $repo $root
     foreach ($s in $subs) { Export-Repo (Join-Path $repo $s.Path) (Join-Path $root $s.Path) }
