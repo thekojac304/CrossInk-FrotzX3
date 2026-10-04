@@ -37,6 +37,11 @@ scripts, configuration, and required dependency or submodule sources. Record
 exact revisions and build instructions. Unmodified upstream Frotz or a moving
 branch is not the matching source.
 
+GitHub's automatic source archives omit submodule contents. Official FrotzX3
+binary releases are therefore paired with a complete-source ZIP,
+`FrotzX3-v<version>-source-complete.zip`, created by
+`tools/release/New-SourceBundle.ps1` (see `tools/release/README.md`).
+
 Follow GPLv2 section 3 (or the applicable later version) for your distribution
 method. If using a written source offer instead of accompanying source, satisfy
 its requirements, including duration and eligible recipients; a general promise

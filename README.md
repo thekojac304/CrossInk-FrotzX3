@@ -53,8 +53,10 @@ See [Building Manually](#building-manually) for flashing and for running
 PlatformIO when `pio` is not on your PATH. Then copy your story files to the SD
 card as described in [SD Card Layout](#sd-card-layout).
 
-> GitHub's automatic "Source code" archives do not include submodules, so they
-> cannot be built on their own. Use `git clone --recurse-submodules`.
+> GitHub's automatic "Source code" archives do not include submodule contents,
+> so they cannot be built on their own. Use `git clone --recurse-submodules`, or
+> the complete-source ZIP described under
+> [Release build and source package](#release-build-and-source-package).
 
 ### Guided Windows installer (experimental)
 
@@ -268,6 +270,30 @@ pio run -e default -t upload
 The built image is `.pio/build/default/firmware-x3-x4.bin`.
 
 The guided installer can perform the build and optionally the upload for you.
+
+---
+
+## Release build and source package
+
+Official FrotzX3 firmware releases are built with the release version set, so
+the firmware identifies itself as `0.9.0-beta.1` instead of the development
+`-dev+<branch>` form:
+
+```powershell
+$env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.1'
+pio run -e default
+```
+
+Official binary releases should be paired with the matching complete-source ZIP,
+`FrotzX3-v0.9.0-beta.1-source-complete.zip`. It is the intended reproducible
+source package for that firmware: the main repository at the release commit plus
+the `freeink-sdk` and nested `lucide` submodules, with no Git metadata, build
+output, story files or saves. GitHub's automatic source archives are not a
+substitute because they omit submodule contents. **No games are included.**
+
+Maintainers create the ZIP with `tools/release/New-SourceBundle.ps1`; see
+[tools/release/README.md](tools/release/README.md) for the exact steps and
+dependency pinning notes.
 
 ---
 
