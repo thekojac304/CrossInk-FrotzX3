@@ -29,8 +29,10 @@ Two paths exist today:
 
 ### Build from source (current reference path)
 
-Requires [PlatformIO](https://platformio.org/) and Git. The CrossInk firmware
-uses a Git submodule (`freeink-sdk`), so clone with submodules:
+Requires [Git](https://git-scm.com/), [PlatformIO Core](https://platformio.org/install/cli)
+(`pio`), and an internet connection for the first build. The firmware depends on
+a Git submodule (`freeink-sdk`, which has its own submodule), so clone with
+submodules:
 
 ```powershell
 git clone --recurse-submodules https://github.com/thekojac304/CrossInk-FrotzX3.git
@@ -38,9 +40,21 @@ cd CrossInk-FrotzX3
 pio run -e default
 ```
 
+If you cloned without `--recurse-submodules`, run
+`git submodule update --init --recursive` inside the repository before building.
+
+The first build downloads the ESP32 toolchain and libraries and compiles the
+ESP-IDF framework, so it takes several minutes (about 10 minutes on a fast
+Windows PC); later builds are much faster. The firmware image is written to
+`.pio/build/default/firmware-x3-x4.bin` (`firmware.bin` in the same folder is
+the same image).
+
 See [Building Manually](#building-manually) for flashing and for running
 PlatformIO when `pio` is not on your PATH. Then copy your story files to the SD
 card as described in [SD Card Layout](#sd-card-layout).
+
+> GitHub's automatic "Source code" archives do not include submodules, so they
+> cannot be built on their own. Use `git clone --recurse-submodules`.
 
 ### Guided Windows installer (experimental)
 
@@ -245,11 +259,13 @@ If `pio` is not on your PATH:
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e default
 ```
 
-To upload using PlatformIO:
+To upload to a device connected over USB using PlatformIO:
 
 ```powershell
 pio run -e default -t upload
 ```
+
+The built image is `.pio/build/default/firmware-x3-x4.bin`.
 
 The guided installer can perform the build and optionally the upload for you.
 
