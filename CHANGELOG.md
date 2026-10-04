@@ -6,6 +6,10 @@
 - Added `tools/release/New-SourceBundle.ps1`, which creates a complete-source ZIP (main repository plus submodules) to accompany FrotzX3 firmware releases, and pinned the `espressif/mdns` build dependency to `1.14.0` so rebuilds resolve the same ESP-IDF component. Official release builds set `CROSSINK_RELEASE_VERSION=0.9.0-beta.1`.
 - Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled.
 
+### Validation
+
+- FrotzX3 `0.9.0-beta.1` passed hardware validation on a physical XTEINK X3 (build at `a045d1fd`). Z3, Z5 and Z8 (Lost Pig) story files were exercised, along with the game picker, Select/power-button behavior, T9 keyboard, autocomplete/context suggestions, parser interaction, transcript paging, manual save/load, rewind, Adventure Log, clean exit/re-entry, and resume. This covers the story files tested, not every Z-machine game.
+
 ## [v1.5.0] - 2026-08-08
 
 ### Added
