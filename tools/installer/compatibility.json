@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "description": "Which official CrossInk commit each FrotzX3 release is built against. Newest first. Only add an entry after regression and XTEINK X3 hardware testing; a clean patch or a successful compile is not enough.",
+  "upstream_repository": "https://github.com/uxjulia/CrossInk.git",
+  "releases": [
+    {
+      "frotzx3_version": "0.9.0-beta.1",
+      "crossink_commit": "cab4f24922f05811e7f44be1057f62ea2d978c52",
+      "crossink_version": "1.5.0 + 3 commits (platformio.ini version 1.5.0; no release tag at this commit, it lies between v1.5.0 and v1.5.1)",
+      "patch_path": "tools/patches/v0.9.0-beta.1",
+      "device": "XTEINK X3",
+      "environment": "default",
+      "status": "experimental",
+      "firmware_hardware_tested": true,
+      "firmware_tested_source": "a045d1fd (monolithic repository build; runtime code unchanged since)",
+      "patch_installer_hardware_tested": false,
+      "notes": "The prebuilt release firmware is the hardware-tested artifact. Firmware produced by the patch installer has not itself been flashed and tested on an X3."
+    }
+  ]
+}

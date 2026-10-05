@@ -1,0 +1,187 @@
+diff --git a/platformio.ini b/platformio.ini
+index d5e6fceba1ba04035e0b7d0cf77ba78363a233dd..e42d2e1cb4f85250fa0855438f2c08a5efc6806f 100644
+--- a/platformio.ini
++++ b/platformio.ini
+@@ -87,6 +87,7 @@ board_build.flash_size = 16MB
+ board_build.partitions = partitions.csv
+ 
+ extra_scripts =
++  pre:scripts/pin_idf_components.py
+   pre:scripts/patch_wolfssl.py
+   pre:scripts/build_web.py
+   pre:scripts/gen_i18n.py
+@@ -126,6 +127,7 @@ lib_ignore =
+   HalClockSim
+ 
+ [env:default]
++monitor_filters = esp32_exception_decoder
+ extends = base
+ custom_firmware_device_type = x3-x4
+ build_flags =
+diff --git a/src/MappedInputManager.cpp b/src/MappedInputManager.cpp
+index 221742f75bd5c966a4783f9d4547e13b674f62df..59cdd489980fd360968aa634971c7b9850e16097 100644
+--- a/src/MappedInputManager.cpp
++++ b/src/MappedInputManager.cpp
+@@ -606,16 +606,46 @@ bool MappedInputManager::wasPressed(const Button button) const {
+ 
+   if (button == Button::Confirm) {
+     if (mapButton(button, &HalGPIO::wasPressed)) {
++
++      /*
++       * Some supported hardware exposes the same physical control as
++       * Confirm while held, then emits a Power release when it comes up.
++       *
++       * main.cpp checks the global Power action BEFORE the active
++       * Activity gets its loop() on the release frame. Without arming
++       * suppression here, a button press that was already consumed as
++       * Confirm can therefore also trigger Sleep on release.
++       *
++       * Arm the Power-release suppression as soon as the Confirm press
++       * is accepted. On hardware where Confirm and Power are separate,
++       * the normal Confirm release below clears this flag again, so it
++       * cannot suppress some unrelated later Power press.
++       */
++      suppressPowerRelease = true;
++
+       return true;
+     }
++
+     if (wasFrontButtonHintTouchedDown(mappedFrontButtonFor(button))) {
+       return true;
+     }
+ 
+-    return shouldUsePowerAsConfirmFallback() &&
+-           !isPowerButtonActionAvailableOutsideReader(
+-               static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn)) &&
+-           gpio.wasPressed(HalGPIO::BTN_POWER);
++    const bool powerFallback =
++        shouldUsePowerAsConfirmFallback() &&
++        !isPowerButtonActionAvailableOutsideReader(
++            static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn)) &&
++        gpio.wasPressed(HalGPIO::BTN_POWER);
++
++    if (powerFallback) {
++
++      /*
++       * Raw Power is explicitly being used as Confirm on this screen.
++       * Consume its later global Power release as well.
++       */
++      suppressPowerRelease = true;
++    }
++
++    return powerFallback;
+   }
+ 
+   if (button == Button::Back && wasBackGesture()) {
+@@ -659,6 +689,18 @@ bool MappedInputManager::wasReleased(const Button button) const {
+ 
+   if (button == Button::Confirm) {
+     if (mapButton(button, &HalGPIO::wasReleased) || wasFrontButtonHintTapped(mappedFrontButtonFor(button))) {
++
++      /*
++       * If this was an ordinary dedicated Confirm button, no matching
++       * Power release occurred and the global handler therefore did not
++       * consume suppressPowerRelease. Clear it now so a later unrelated
++       * Power press is never swallowed.
++       *
++       * On shared Confirm/Power hardware, main.cpp's earlier Power-release
++       * check already consumed and cleared this flag before Activity::loop().
++       */
++      suppressPowerRelease = false;
++
+       if (suppressConfirmRelease) {
+         suppressConfirmRelease = false;
+         return false;
+@@ -712,6 +754,27 @@ bool MappedInputManager::isPressed(const Button button) const {
+   }
+ #endif
+ 
++  /*
++   * If this physical press has already been accepted as Confirm,
++   * hide the matching Power hold from the global power handler too.
++   *
++   * suppressPowerRelease was originally added to swallow the eventual
++   * Power release on shared Confirm/Power hardware.  main.cpp can also
++   * trigger a configured long-press Power action while the button is
++   * still DOWN, before that release ever occurs.  Returning false here
++   * prevents a slightly long Select press from becoming Sleep (or any
++   * other global long-Power action) after the Activity has consumed it
++   * as Confirm.
++   *
++   * The release path still sees the raw Power release and clears
++   * suppressPowerRelease exactly as before.
++   */
++  if (button == Button::Power &&
++      suppressPowerRelease) {
++
++    return false;
++  }
++
+   if (button == Button::Confirm) {
+     if (mapButton(button, &HalGPIO::isPressed)) {
+       return true;
+diff --git a/src/activities/home/HomeActivity.cpp b/src/activities/home/HomeActivity.cpp
+index 4e1432dc74452b53840a7e34aab2c72d6cafc307..dccd6f361170b28588f56d8942d7eaa08db0a3d2 100644
+--- a/src/activities/home/HomeActivity.cpp
++++ b/src/activities/home/HomeActivity.cpp
+@@ -25,6 +25,7 @@
+ #include "../reader/EpubReaderUtils.h"
+ #include "BookmarkStore.h"
+ #include "ClippingStore.h"
++#include "../frotzx3/FrotzX3Activity.h"
+ #include "CrossPointSettings.h"
+ #include "CrossPointState.h"
+ #include "MappedInputManager.h"
+@@ -57,6 +58,7 @@ enum class HomeMenuAction {
+   OpdsBrowser,
+   ReadingStats,
+   Bookmarks,
++  InteractiveFiction,
+   FileTransfer,
+   Settings,
+ };
+@@ -68,7 +70,7 @@ struct HomeMenuEntry {
+ };
+ 
+ struct HomeMenuEntries {
+-  static constexpr int kCapacity = 8;
++  static constexpr int kCapacity = 9;
+   std::array<HomeMenuEntry, kCapacity> entries{};
+   int count = 0;
+ 
+@@ -274,6 +276,7 @@ void appendHomeMenuItems(HomeMenuEntries& items, bool hasOpdsServers, bool hasRe
+     items.push({savedItemsLabel(hasBookmarks, hasClippings), BookmarkIcon, HomeMenuAction::Bookmarks});
+   }
+ 
++  items.push({"FrotzX3", Book, HomeMenuAction::InteractiveFiction});
+   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
+   items.push({tr(STR_SETTINGS_TITLE), Settings, HomeMenuAction::Settings});
+ }
+@@ -298,6 +301,7 @@ HomeMenuEntries buildMinimalMenuItems(bool hasOpdsServers, bool hasReadingStats,
+     items.push({tr(STR_READING_STATS), Chart, HomeMenuAction::ReadingStats});
+   }
+ 
++  items.push({"FrotzX3", Book, HomeMenuAction::InteractiveFiction});
+   items.push({tr(STR_FILE_TRANSFER), Transfer, HomeMenuAction::FileTransfer});
+   return items;
+ }
+@@ -593,7 +597,7 @@ static_assert(HomeActivity::kMaxCachedBooks >= LyraCarouselMetrics::values.homeR
+ 
+ int HomeActivity::getMenuItemCount() const {
+   const auto& metrics = UITheme::getInstance().getMetrics();
+-  int count = 4;  // File Browser, Recents, File transfer, Settings
++  int count = 5;  // File Browser, Recents, Interactive Fiction, File transfer, Settings
+   if (!metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
+     count += getVisibleRecentBookCount();
+   } else if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
+@@ -1655,6 +1659,10 @@ void HomeActivity::loop() {
+       case HomeMenuAction::Bookmarks:
+         onSavedItemsOpen();
+         break;
++      case HomeMenuAction::InteractiveFiction:
++        activityManager.pushActivity(
++            std::make_unique<FrotzX3Activity>(renderer, mappedInput));
++        break;  
+       case HomeMenuAction::FileTransfer:
+         onFileTransferOpen();
+         break;
