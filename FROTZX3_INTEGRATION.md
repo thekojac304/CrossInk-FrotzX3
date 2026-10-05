@@ -2,6 +2,13 @@
 
 FrotzX3 is a source package compiled into CrossInk, not a separately installed runtime app. Transplant from a known-good, physical-X3-tested checkpoint. Adapt host integration to the destination release rather than replacing whole CrossInk host files.
 
+> **Patch package.** The same integration is also captured as a versioned patch
+> package under `tools/patches/` (a git patch for the three CrossInk files below
+> plus overlay copies of the FrotzX3-owned files), applied by the experimental
+> installer in `tools/installer/`. See `tools/patches/FROTZX3_DELTA.md` for a
+> per-file list with conflict risk, and `tools/installer/UPDATING_CROSSINK.md`
+> for moving to a newer CrossInk release. The manual steps below remain valid.
+
 ## Files to copy
 
 Also follow [Licensing and release packaging](#licensing-and-release-packaging)
@@ -55,7 +62,7 @@ If the future release already implements equivalent semantics, no input edit is 
 
 ## Build and runtime contracts
 
-- PlatformIO discovers the local library through `<FrotzX3.h>` and compiles the activity under `src/`. No Frotz-specific `platformio.ini` edit is currently needed. The exception-decoder monitor filter is optional debugging tooling.
+- PlatformIO discovers the local library through `<FrotzX3.h>` and compiles the activity under `src/`. No Frotz-specific library setting is needed in `platformio.ini`. Two small build-tooling edits exist: `pre:scripts/pin_idf_components.py` in `extra_scripts` (pins `espressif/mdns` to `1.14.0` so rebuilds are reproducible; the script itself is a FrotzX3-owned file) and an optional `monitor_filters = esp32_exception_decoder` line for debugging.
 - Preserve compatible CrossInk APIs/includes: `Activity`, `RenderLock`, `MappedInputManager`, `GfxRenderer`, `UITheme`, `fontIds.h`, `Logging.h`, and `HalStorage`/`HalFile`. Library metadata does not declare a complete independent dependency bundle.
 - This port requires ESP32 FreeRTOS and `esp_heap_caps.h`. Native simulator support cannot be assumed without compatible shims.
 - There is one persistent Frotz task and shared global interpreter state. Preserve input-wait handoff, task shutdown, and output ownership; this is not a multiple-instance interface.
@@ -129,9 +136,10 @@ FrotzX3 redistributes modified Frotz source under GPL-2.0-or-later obligations.
 See [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-The installer copies the app directories and this guide, but does not copy the
-top-level licensing documents. Before redistributing the destination source or
-firmware, manually include `FROTZX3_LICENSE.md`, `THIRD_PARTY_NOTICES.md`,
+The patch package includes the licensing documents and `LICENSES/` directory. The
+older transplant installer copies only the app directories and this guide, not
+the top-level licensing documents. After a manual transplant, before
+redistributing the destination source or firmware, manually include `FROTZX3_LICENSE.md`, `THIRD_PARTY_NOTICES.md`,
 `FROTZX3_README.md`, and the complete `LICENSES/` directory from this package.
 Preserve the destination's original `LICENSE` and all dependency notices. If
 license documents already exist, retain both projects' notices rather than

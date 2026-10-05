@@ -18,15 +18,17 @@ not promise compatibility with every story or every Z-machine feature.
 
 ## Installation - Beta (`v0.9.0-beta.1`)
 
-The installer and firmware distribution mechanism are still being finalized, and
-no prebuilt firmware is published yet. See **Installation - Beta** in the main
-[README](README.md) for the current build-from-source steps.
+**Recommended:** download the prebuilt, hardware-tested firmware
+(`FrotzX3-v0.9.0-beta.1-firmware-x3-x4.bin`) from the GitHub release and install
+it with CrossInk's documented firmware-update methods. See **Installation** in
+the main [README](README.md).
 
-An experimental Windows wizard (**Install-FrotzX3.cmd**) can transplant FrotzX3
-into a separate fresh CrossInk checkout. Git for Windows is required; building
-also requires PlatformIO. Review prompts before approving installation or
-flashing. See the [installer guide](FROTZX3_INSTALLER_README.md) for
-prerequisites and troubleshooting.
+**Experimental:** the patch installer (`tools/installer/Install-FrotzX3.ps1`)
+downloads official CrossInk, checks out the exact supported commit, applies the
+FrotzX3 patch package, and builds a firmware file locally. It has not been
+hardware-tested as an install method and is not the recommended path yet.
+Building from a source checkout also works; see the main README.
+
 [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md) covers developer integration,
 storage layout, and physical-X3 verification.
 
