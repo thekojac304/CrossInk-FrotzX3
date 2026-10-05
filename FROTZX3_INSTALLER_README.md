@@ -1,4 +1,7 @@
-# Install FrotzX3 into another CrossInk checkout
+# Install FrotzX3 into another CrossInk checkout (legacy transplant installer)
+
+> **Legacy.** This older installer copies FrotzX3 files into an existing CrossInk checkout and patches its Home menu. It has been superseded by the experimental patch installer in [tools/installer/](tools/installer/README.md), which starts from a pinned official CrossInk commit and builds a firmware file. Neither installer is the recommended beta install; use the prebuilt release firmware.
+
 
 ## Recommended: Double-click Install-FrotzX3.cmd
 
@@ -18,7 +21,7 @@ Option **2** accepts a pasted existing CrossInk folder path, with or without quo
 
 Git for Windows must be installed to download and check folders. PlatformIO must be installed if you choose to build. The wizard finds both automatically and gives a plain-English message if either is missing; it does not silently install system tools. If Windows security or an organization policy blocks the launcher, ask for help reviewing and allowing the trusted script rather than disabling machine-wide protections. The launcher uses a process-only PowerShell execution-policy setting.
 
-When a release needs manual review, no guessed patch is applied. A compatibility report is saved under `%TEMP%\FrotzX3-Installer\`; the exact filename is shown in the window. Give that report to ChatGPT/Codex or a developer. It contains local paths, checks, backup paths and command output; review it before sharing publicly. A failed download can leave a new partial folder. An interrupted install/build can leave files in the destination; the report records what happened and lists backend backups. The known-good folder remains untouched.
+When a release needs manual review, no guessed patch is applied. A compatibility report is saved under `%TEMP%\FrotzX3-Installer\`; the exact filename is shown in the window. Give that report to a developer. It contains local paths, checks, backup paths and command output; review it before sharing publicly. A failed download can leave a new partial folder. An interrupted install/build can leave files in the destination; the report records what happened and lists backend backups. The known-good folder remains untouched.
 
 The wizard keeps the advanced backend below unchanged. Its only additional source patch is the already-tested generic Confirm/Power update, limited to a recognized input layout and verified against the expected result. It does not add Frotz-specific input conditions or edit `main.cpp`. It refuses unrelated unsaved changes even when applying its own compatibility fix.
 

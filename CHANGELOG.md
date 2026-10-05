@@ -1,10 +1,14 @@
 ## [Unreleased]
 
+### Added
+
+- Added an experimental FrotzX3 patch package (`tools/patches/`) and Windows patch installer (`tools/installer/`). The installer downloads official CrossInk, checks out the exact supported commit, applies FrotzX3, and builds a firmware file locally; `Test-FrotzX3Compatibility.ps1` checks candidate CrossInk versions, and `compatibility.json` records the supported CrossInk commit. The installer has not been hardware-tested and the prebuilt release firmware remains the recommended install.
+
 ### Changed
 
 - FrotzX3 is versioned `0.9.0-beta.1` for its first public beta. Its verbose development diagnostics (per-command timing, object-tree and context-candidate dumps) are now compiled out unless `FROTZX3_DEBUG_LOG` is defined, fatal interpreter errors are always logged, and an unreachable prototype UI block was removed; gameplay behavior is unchanged.
 - Added `tools/release/New-SourceBundle.ps1`, which creates a complete-source ZIP (main repository plus submodules) to accompany FrotzX3 firmware releases, and pinned the `espressif/mdns` build dependency to `1.14.0` so rebuilds resolve the same ESP-IDF component. Official release builds set `CROSSINK_RELEASE_VERSION=0.9.0-beta.1`.
-- Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled.
+- Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled. The README was rewritten as the public project landing page.
 
 ### Validation
 

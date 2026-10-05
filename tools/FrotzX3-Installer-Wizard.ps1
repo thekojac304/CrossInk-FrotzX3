@@ -295,7 +295,7 @@ try {
     Write-Host "FrotzX3 installed: $installed | Firmware build: $buildState | X3 flashed: $flashed"
     Write-Host 'Your original FrotzX3 folder was not changed.'
     Write-Host "Compatibility report: $reportPath"
-    Write-Host 'Next action: Share this report with ChatGPT/Codex or a developer to resolve the reported problem.'
+    Write-Host 'Next action: Share this report with a developer to resolve the reported problem.'
     Write-Report "STOPPED: $($_.Exception.Message)"
 } finally {
     Write-Report "Files: $changes`nInstalled: $installed`nBuild: $buildState`nFlashed: $flashed"

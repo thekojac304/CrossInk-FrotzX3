@@ -1,160 +1,110 @@
 # FrotzX3
 
-**Frotz / Z-machine interactive fiction for the XTEINK X3, integrated into CrossInk.**
+**A native-feeling Z-machine Interactive Fiction player, integrated with [CrossInk](https://github.com/uxjulia/CrossInk), for the XTEINK X3.**
 
-FrotzX3 turns the XTEINK X3 into a dedicated e-ink text-adventure machine.
+FrotzX3 turns the XTEINK X3 into a dedicated e-ink text-adventure machine. It runs
+real Z-machine story files (the format used by Infocom games and most modern
+parser-based interactive fiction) through an interface designed around the X3's few
+physical buttons and its e-ink display.
 
-It runs real Z-machine story files through a native-feeling interface designed around the X3's limited physical controls, e-ink display, and ESP32-C3 hardware.
+It is built on CrossInk firmware and the [Frotz](https://github.com/DavidGriffith/frotz)
+interpreter.
 
-FrotzX3 is built on top of [CrossInk](https://github.com/uxjulia/CrossInk) and the [Frotz](https://github.com/DavidGriffith/frotz) Z-machine interpreter.
+> **No games are included.** You must supply your own legally obtained Z-machine
+> story files. See [Adding games](#adding-games).
 
-> **No games are included.**
->
-> You must provide your own legally obtained Z-machine story files.
+> **Public beta: `v0.9.0-beta.1`.** FrotzX3 runs on a physical XTEINK X3, but this is
+> a first public beta. Expect rough edges and read [Known limitations](#known-limitations).
 
-> **Public beta — `v0.9.0-beta.1`.**
->
-> FrotzX3 works on physical XTEINK X3 hardware, but this is a first public beta.
-> Expect rough edges, and see [Current Limitations](#current-limitations).
+**Contents:** [Install](#install) · [Adding games](#adding-games) · [Controls](#controls) ·
+[Saves and rewind](#saves-and-rewind) · [Compatibility](#compatibility) ·
+[Known limitations](#known-limitations) · [Building from source](#building-from-source) ·
+[Reporting problems](#reporting-problems) · [Licensing](#licensing-and-attribution)
 
 ---
 
-## Installation — Beta
+## Features
 
-**The installer and firmware distribution mechanism are still being finalized.**
-No prebuilt firmware is published yet, and the steps below may change between
-beta releases.
+- Frotz Z-machine interpreter running natively on the X3 (ESP32-C3).
+- **Z3, Z5 and Z8** stories, hardware-tested.
+- Game picker for story files on the SD card.
+- Native e-ink UI with a **T9-style keyboard** for typing commands.
+- **Autocomplete and context suggestions**, including inventory- and room-aware object suggestions.
+- Quick **action menus** and a **movement menu** (compass directions, up/down, in/out).
+- **Parser feedback and disambiguation**: "Which do you mean...?" questions become a pick-one choice.
+- Status-line display for stories that provide one (Z3).
+- **Resume** where you left off, **3 manual save slots**, and **rewind** to recent turns.
+- **Adventure Log** of recent turns, with rewind.
+- **Crash recovery** prompt if a session ended unexpectedly.
+- Paged **transcript** designed for e-ink refresh, with long-press page navigation.
+- Single-key input for stories that wait for a key press (`READ_CHAR`).
+- Clean exit and re-entry without restarting the device.
 
-Two paths exist today:
+## Supported hardware
 
-### Build from source (current reference path)
+- **XTEINK X3**: developed and physically tested.
 
-Requires [Git](https://git-scm.com/), [PlatformIO Core](https://platformio.org/install/cli)
-(`pio`), and an internet connection for the first build. The firmware depends on
-a Git submodule (`freeink-sdk`, which has its own submodule), so clone with
-submodules:
+CrossInk supports other devices, and the firmware image is the shared X3/X4 build, but
+**only the X3 has been tested with FrotzX3.** Other devices are not supported targets.
+
+---
+
+## Install
+
+FrotzX3 is a CrossInk-based firmware build with the interactive-fiction player added.
+Installing it **replaces your current CrossInk firmware** with FrotzX3's build (based on
+CrossInk 1.5.0 plus three upstream commits). Your SD card contents are not touched. To go
+back, install official CrossInk again.
+
+### Recommended beta install
+
+Use the prebuilt, hardware-tested firmware.
+
+1. Download `FrotzX3-v0.9.0-beta.1-firmware-x3-x4.bin` from the
+   [Releases page](https://github.com/thekojac304/CrossInk-FrotzX3/releases).
+2. Optional: check that its SHA-256 matches the value in the release notes
+   (`Get-FileHash <file> -Algorithm SHA256` in PowerShell).
+3. Install it with one of CrossInk's documented firmware-update methods
+   (see [docs/installation.md](docs/installation.md)):
+   - **SD card update:** copy the `.bin` to the SD card, then on the device go to
+     **Settings > System > SD Card Firmware Update** and choose the file.
+   - **USB:** flash the same file with `esptool` at offset `0x10000`
+     (`esptool.py --chip esp32c3 --port <port> --baud 921600 write_flash 0x10000 <file>`).
+
+   The CrossInk web installer at inky.crossink.dev installs *official* CrossInk, not FrotzX3.
+4. After the device restarts, open **FrotzX3** from the Home menu.
+
+### Experimental patch installer
+
+> Experimental: **not** hardware-tested as an install method and not the recommended path yet.
+
+`tools/installer/Install-FrotzX3.ps1` (Windows PowerShell) builds the firmware locally
+instead of downloading a prebuilt one. It:
+
+1. downloads official CrossInk,
+2. checks out the exact supported CrossInk commit,
+3. applies the FrotzX3 patch package,
+4. builds locally with PlatformIO, and
+5. writes the firmware `.bin` and its SHA-256 (it does **not** flash your device).
 
 ```powershell
-git clone --recurse-submodules https://github.com/thekojac304/CrossInk-FrotzX3.git
-cd CrossInk-FrotzX3
-pio run -e default
+powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1
 ```
 
-If you cloned without `--recurse-submodules`, run
-`git submodule update --init --recursive` inside the repository before building.
+Requires Git and PlatformIO. Details, options and troubleshooting:
+[tools/installer/README.md](tools/installer/README.md). This architecture is intended to
+make future CrossInk updates easier: a new CrossInk release only needs a small patch update
+and a compatibility entry ([UPDATING_CROSSINK.md](tools/installer/UPDATING_CROSSINK.md)).
 
-The first build downloads the ESP32 toolchain and libraries and compiles the
-ESP-IDF framework, so it takes several minutes (about 10 minutes on a fast
-Windows PC); later builds are much faster. The firmware image is written to
-`.pio/build/default/firmware-x3-x4.bin` (`firmware.bin` in the same folder is
-the same image).
-
-See [Building Manually](#building-manually) for flashing and for running
-PlatformIO when `pio` is not on your PATH. Then copy your story files to the SD
-card as described in [SD Card Layout](#sd-card-layout).
-
-> GitHub's automatic "Source code" archives do not include submodule contents,
-> so they cannot be built on their own. Use `git clone --recurse-submodules`, or
-> the complete-source ZIP described under
-> [Release build and source package](#release-build-and-source-package).
-
-### Guided Windows installer (experimental)
-
-`Install-FrotzX3.cmd` and `tools/Install-FrotzX3.ps1` can transplant FrotzX3 into
-a separate, fresh CrossInk checkout. They are provided as-is while the final
-distribution mechanism is decided, and are not yet the recommended way to
-install. Review each prompt before approving a build or flash. See
-[FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md) for prerequisites and
-details.
+An older "transplant" installer (`Install-FrotzX3.cmd`) is still in the repository for
+reference; see [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md). Prefer the
+steps above.
 
 ---
 
-## What FrotzX3 Can Do
+## Adding games
 
-FrotzX3 currently includes:
-
-- Real Frotz Z-machine interpreter integration.
-- Z3, Z5, and Z8 story support.
-- Game picker for story files stored on the SD card.
-- Resume and New Game startup choices.
-- Automatic save / recovery support.
-- Three manual save slots.
-- Rewind checkpoints.
-- Adventure Log with rewind integration.
-- Native X3 command entry.
-- T9-style keyboard input.
-- Autocomplete and context-aware word suggestions.
-- Inventory-aware command suggestions.
-- Context-sensitive object/action menus.
-- Quick-command menus.
-- Compass-style movement menu including diagonals, up, and down.
-- Parser feedback integration.
-- Z-machine status-line handling.
-- Transcript pagination.
-- Long-press page navigation.
-- Numeric input support for in-game menus.
-- Single-key input support for games that use `READ_CHAR`.
-- Clean exit and re-entry without restarting the entire device.
-
-The goal is not merely to make Frotz run on the X3, but to make interactive fiction feel like a native X3 application.
-
----
-
-## Supported Story Versions
-
-- **Z3, Z5, and Z8** are supported and have been physically tested on the XTEINK X3.
-- The game picker also lists `.z4`, `.z6`, and `.z7` files, and the interpreter core
-  accepts Z-code versions 1 through 8, but Z4 and Z7 stories have not been tested on
-  hardware.
-- Z6 (graphical) stories are not a supported target.
-
-Recognition of a file by the picker does not guarantee that every story or
-Z-machine feature works.
-
----
-
-## Tested Games
-
-Development and testing have included:
-
-- **Zork I** — Z3
-- **Zork I** — Z5
-- **Planetfall** — Z5
-- **Lost Pig** — Z8
-- **FrotzX3 Test Lab / PunyInform test story**
-- Additional Z-machine test stories
-
-Z3, Z5, and Z8 have all been physically tested on the XTEINK X3.
-
-Z6 graphics-focused games are not currently a primary target.
-
----
-
-## Tested Hardware
-
-FrotzX3 has been developed and physically tested on:
-
-- **XTEINK X3**
-
-CrossInk itself may support additional devices, but those should not be considered tested FrotzX3 targets unless explicitly documented here.
-
----
-
-## Screenshots
-
-Screenshots and device photos coming soon.
-
----
-
-## SD Card Layout
-
-Place Z-machine story files in:
-
-```text
-/adventures/
-```
-
-For example:
+Create an `adventures` folder at the top of the SD card and copy your story files into it:
 
 ```text
 /adventures/zork1.z3
@@ -162,293 +112,194 @@ For example:
 /adventures/LostPig.z8
 ```
 
-The game picker recognizes Z-machine story files from `.z3` through `.z8`.
+- The picker lists story files ending in `.z3` to `.z8` (case-insensitive), directly
+  inside `/adventures` (subfolders are not searched), **up to 16 stories**.
+- Z3, Z5 and Z8 are the tested versions. See [Compatibility](#compatibility).
+- Saves are created automatically (see [Saves and rewind](#saves-and-rewind)). The full
+  file name, including the extension, forms the save name, so renaming a story starts a new
+  set of saves.
 
-## Where Saves Live
+FrotzX3 does **not** include Zork, Planetfall, Lost Pig or any other game. Many modern
+interactive-fiction games are free to download from sites such as the
+[IF Archive](https://ifarchive.org/); commercial games are not free to redistribute. Each
+game's own permissions apply.
 
-FrotzX3 manages all save data under `/adventures/saves/` on the SD card:
+---
+
+## Controls
+
+FrotzX3 uses four actions everywhere: **Back**, **Select**, **Previous** and **Next**.
+Previous/Next are the front Left/Right buttons or the side page buttons, and
+selection lists wrap around at both ends. The on-screen hint bar shows what each button does.
+
+| Where | What it does |
+| --- | --- |
+| Game picker | Previous/Next choose a story; Select opens it; Back leaves FrotzX3. |
+| Start prompt | Resume, load a manual save, or New Game (shown when saves exist). |
+| Actions menu | Look, Go, Take, Drop, Examine, Open, Close, Inventory, Read, Search, Climb, Type Command. |
+| Movement menu | N, NE, E, SE, S, SW, W, NW, Up, Down, In, Out. |
+| Object menus | Take/Drop/Examine/Read/Open list objects FrotzX3 found in the room and your inventory, plus a "Type..." entry. |
+| Keyboard | T9-style letter groups (ABC, DEF, ...), Space, Suggest, Delete, Enter. Select a group, then a letter. Back steps up; Back on the group row cancels. Up to 63 characters. |
+| Suggestions | Up to three completions based on verbs and known objects. |
+| Transcript | **Hold** a page button for about half a second to jump to the previous/next transcript page. |
+| Game menu | **Hold Back** for about half a second: Save Game, Load Game, Rewind, Adventure Log, Exit Game. |
+| Single-key prompts | When a story waits for one key, a key pad appears (digits, Y/N, then More for letters, symbols, arrows, function keys). |
+
+On the X3, Select can share its button with Power. FrotzX3 defers saves and other slow work
+until Select is released, so a Select press does not put the device to sleep. The exact
+controls may change as the interface is refined.
+
+---
+
+## Saves and rewind
+
+- **Resume:** choosing **Exit Game** from the game menu saves your place and quits. Next time,
+  pick **Resume**. If you start a New Game while a resume save exists, you are asked before it
+  is replaced.
+- **Manual saves:** three slots, from the game menu. Overwriting and loading ask for confirmation.
+- **Rewind:** FrotzX3 keeps checkpoints of your most recent turns (five) on the SD card.
+  Use **Rewind** in the game menu for the latest one, or pick an entry marked `[R]` in the
+  **Adventure Log** (it lists your last ten turns).
+- **Crash recovery:** if a session ended without a clean exit, the next start offers to recover
+  the latest checkpoint or ignore it.
+
+All of it lives under `/adventures/saves/` on the SD card:
 
 ```text
 /adventures/
   Story.z5
   saves/
-    Story.z5.sav                  # automatic resume save
+    Story.z5.sav                  # resume save
     Story.z5.recovery             # crash-recovery marker
-    manual/
-      Story.z5.manual1.sav        # manual slots 1-3
-    rewind/
-      Story.z5.rewind<N>.sav      # rewind checkpoints
+    manual/Story.z5.manual1.sav   # manual slots 1-3
+    rewind/Story.z5.rewind<N>.sav # rewind checkpoints
 ```
-
-The full story filename, including its extension, forms the save name, so
-renaming a story file starts a new set of saves. Up to 16 stories are listed in
-the picker. FrotzX3 creates the save directories automatically.
 
 ---
 
-## FrotzX3 Controls
+## Compatibility
 
-FrotzX3 is designed specifically around the X3's limited physical controls.
+- **Z3, Z5 and Z8** stories have been physically tested on an XTEINK X3.
+- The picker also lists `.z4`, `.z6` and `.z7` files, and the interpreter accepts Z-code
+  versions 1 to 8, but Z4 and Z7 are untested and Z6 (graphical) stories are not a supported target.
+- Development testing included Zork I (Z3 and Z5), Planetfall, Lost Pig (Z8), a PunyInform
+  test story and other test stories. **This does not mean every game works.** Some unusual
+  games may expose interpreter or interface behavior that has not been tested, and output is
+  limited to plain text (no graphics, styles or non-ASCII characters).
 
-The interface includes:
+## Known limitations
 
-- Native menu navigation.
-- T9-style text entry.
-- Context-aware command suggestions.
-- Quick actions for common interactive-fiction verbs.
-- Directional movement menu.
-- Long-press actions where useful.
-- Transcript paging designed for e-ink refresh behavior.
-
-The exact controls may evolve as the interface continues to be refined.
-
----
-
-## Installing Into Future CrossInk Releases
-
-> Part of the experimental installer workflow; see [Installation — Beta](#installation--beta).
-
-One of the goals of FrotzX3 is to remain reasonably portable across future CrossInk releases.
-
-The guided installer handles the normal migration process.
-
-For developers or manual integration, see [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md).
-
-The FrotzX3-specific source is primarily contained in:
-
-```text
-lib/FrotzX3/
-src/activities/frotzx3/
-```
-
-Only a small amount of CrossInk host integration is required outside those directories.
+- Beta software, tested only on the XTEINK X3.
+- Firmware flash space is nearly full on the X3 (the image uses roughly 97% of the OTA
+  partition), so there is little room for new features.
+- Compatibility is not universal; see above.
+- At most 16 story files are listed in the picker, and only from `/adventures`.
+- The keyboard has letters only (no digits or punctuation). Number choices use the single-key pad.
+- Z4+ stories have no status line display; Z3 stories show room and score/moves in the header.
+- The experimental patch installer is not yet the default install method and has not been hardware-tested.
+- Future CrossInk releases may need a small FrotzX3 compatibility update.
 
 ---
 
-## Advanced Installation (Experimental)
+## Building from source
 
-The guided Windows installer is:
-
-```text
-Install-FrotzX3.cmd
-```
-
-Advanced users can directly use the PowerShell backend:
-
-```text
-tools/Install-FrotzX3.ps1
-```
-
-The backend supports compatibility checking, dry runs, existing installations, backups, building, and other migration options.
-
-See [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md).
-
----
-
-## Building Manually
-
-CrossInk uses PlatformIO.
-
-From the repository root (after cloning with `--recurse-submodules`):
+You need [Git](https://git-scm.com/) and [PlatformIO Core](https://platformio.org/install/cli).
+The firmware depends on a submodule (`freeink-sdk`, which has its own submodule), so clone
+with submodules:
 
 ```powershell
+git clone --recurse-submodules https://github.com/thekojac304/CrossInk-FrotzX3.git
+cd CrossInk-FrotzX3
 pio run -e default
 ```
 
-If `pio` is not on your PATH:
+If you already cloned without submodules, run `git submodule update --init --recursive` first.
+The first build downloads the ESP32 toolchain and compiles the framework (about 10 minutes
+on a fast PC). The image is written to `.pio/build/default/firmware-x3-x4.bin`
+(`firmware.bin` is the same image). To flash over USB with PlatformIO:
+`pio run -e default -t upload`. If `pio` is not on your PATH, use
+`& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe"`.
 
-```powershell
-& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e default
-```
+GitHub's automatic "Source code" archives omit submodule contents and cannot be built on
+their own. Use `git clone --recurse-submodules`, or the **complete-source ZIP** attached to
+each release.
 
-To upload to a device connected over USB using PlatformIO:
-
-```powershell
-pio run -e default -t upload
-```
-
-The built image is `.pio/build/default/firmware-x3-x4.bin`.
-
-The guided installer can perform the build and optionally the upload for you.
-
----
-
-## Release build and source package
-
-Official FrotzX3 firmware releases are built with the release version set, so
-the firmware identifies itself as `0.9.0-beta.1` instead of the development
-`-dev+<branch>` form:
+### Official release builds
 
 ```powershell
 $env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.1'
+Remove-Item Env:CROSSINK_RC_HASH -ErrorAction SilentlyContinue
 pio run -e default
 ```
 
-Official binary releases should be paired with the matching complete-source ZIP,
-`FrotzX3-v0.9.0-beta.1-source-complete.zip`. It is the intended reproducible
-source package for that firmware: the main repository at the release commit plus
-the `freeink-sdk` and nested `lucide` submodules, with no Git metadata, build
-output, story files or saves. GitHub's automatic source archives are not a
-substitute because they omit submodule contents. **No games are included.**
+Each release pairs the firmware with `FrotzX3-v<version>-source-complete.zip` (the
+repository plus submodules at the release commit; no Git data, build output, games or saves).
+See [tools/release/README.md](tools/release/README.md) for how it is made and how
+`espressif/mdns` is pinned to 1.14.0 for reproducible builds.
 
-Maintainers create the ZIP with `tools/release/New-SourceBundle.ps1`; see
-[tools/release/README.md](tools/release/README.md) for the exact steps and
-dependency pinning notes.
-
----
-
-## Project Goals
-
-FrotzX3 prioritizes:
-
-1. Stability.
-2. Z-machine compatibility.
-3. Reliable save and restore.
-4. Performance on the ESP32-C3.
-5. Comfortable X3 controls.
-6. Interactive-fiction quality-of-life features.
-7. Portability to future CrossInk releases.
-
-The X3 has limited RAM, so changes are intentionally conservative with memory usage.
-
-A successful compile is not considered sufficient validation; physical-device testing is the authoritative test.
+For developers: [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md) explains how FrotzX3 attaches
+to CrossInk, and [tools/patches/FROTZX3_DELTA.md](tools/patches/FROTZX3_DELTA.md) lists every
+change against official CrossInk. FrotzX3's own code lives in `lib/FrotzX3/` and
+`src/activities/frotzx3/`; the CrossInk edits are small.
 
 ---
 
-## Current Limitations
+## Reporting problems
 
-- FrotzX3 is currently tested only on the XTEINK X3.
-- Z6 graphics are not a primary supported use case.
-- Some unusual games may expose interpreter or UI behavior that has not yet been tested.
-- Future CrossInk releases may occasionally require a small compatibility update.
-- The installer and firmware distribution mechanism are still being finalized (see [Installation — Beta](#installation--beta)); the Windows guided installer expects the required development tools to already be available.
-- Firmware flash space is nearly full on the X3 (the image uses roughly 97% of the OTA partition), so new features have little headroom.
-- At most 16 story files are listed in the game picker.
-- No commercial or copyrighted story files are distributed with this project.
+Bug reports, compatibility findings and test reports are welcome via
+[GitHub Issues](https://github.com/thekojac304/CrossInk-FrotzX3/issues). It helps to include:
 
----
-
-## About CrossInk
-
-FrotzX3 is built on [CrossInk](https://github.com/uxjulia/CrossInk), an open-source firmware project for e-ink devices including the XTEINK family.
-
-CrossInk provides the underlying:
-
-- Device support.
-- Display rendering.
-- Input handling.
-- SD-card access.
-- Activity/application framework.
-- Power management.
-- Firmware infrastructure.
-
-FrotzX3 adds the Z-machine interpreter, interactive-fiction UI, save systems, command helpers, and related integration on top of that foundation.
-
-For general CrossInk documentation, visit the [upstream CrossInk project](https://github.com/uxjulia/CrossInk).
+- Story file name and Z-machine version.
+- What you were doing when the problem happened.
+- Whether the game was new or resumed, and whether saving, loading or rewinding was involved.
+- Serial log, if you have one. The log prints the FrotzX3 version each time a story starts.
+- Your FrotzX3 version (`0.9.0-beta.1`) and your device.
 
 ---
 
-## About Frotz
+## Licensing and attribution
 
-[Frotz](https://github.com/DavidGriffith/frotz) is a long-running open-source interpreter for Infocom-style Z-machine interactive fiction.
+This repository combines code under compatible open-source licenses:
 
-FrotzX3 includes modified Frotz-derived source adapted for the XTEINK X3 / CrossInk environment.
+- **CrossInk** is under the **MIT License**. The original [LICENSE](LICENSE) is unchanged.
+- **Frotz-derived code** in `lib/FrotzX3/` is under the **GNU GPL, version 2 or later**
+  (`GPL-2.0-or-later`), with original notices retained.
 
-The modifications include platform integration, storage handling, lifecycle support, save/restore integration, memory behavior suitable for the ESP32-C3, and APIs used by the native X3 interface.
+Because FrotzX3 firmware contains GPL-covered Frotz-derived code, anyone redistributing the
+firmware must also make the corresponding source available under the GPL. That is why every
+release ships a matching complete-source ZIP. The root `LICENSE` is the CrossInk MIT license
+and does not relicense Frotz code.
 
----
+Details: [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md),
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [LICENSES/](LICENSES/).
 
-## Licensing
+**Game files are separate.** FrotzX3 does not include any game or story file, and open-source
+licenses on Frotz or CrossInk grant no rights to commercial games. Obtain and use story files legally.
 
-This repository contains code under multiple compatible open-source licenses.
+### Acknowledgments
 
-### CrossInk
+FrotzX3 exists because of:
 
-CrossInk is distributed under the **MIT License**.
-
-The original CrossInk license and copyright notices are retained.
-
-### Frotz
-
-Frotz-derived code is distributed under the **GNU General Public License, version 2 or later (GPL-2.0-or-later)**.
-
-Original Frotz copyright and license notices are retained.
-
-### FrotzX3 distribution
-
-Because FrotzX3 includes GPL-covered Frotz-derived code, redistribution of firmware or combined source containing FrotzX3 must comply with the applicable GPL terms.
-
-If you redistribute compiled firmware containing FrotzX3, the corresponding source used to build that firmware should also be made available as required by the GPL.
-
-For full details, see:
-
-- [FROTZX3_LICENSE.md](FROTZX3_LICENSE.md)
-- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- [LICENSES/](LICENSES/)
-
-The root [LICENSE](LICENSE) remains the original CrossInk MIT license and should not be interpreted as relicensing GPL-covered Frotz code.
-
----
-
-## Game Files and Copyright
-
-FrotzX3 does **not** include Zork, Planetfall, Lost Pig, or any other game/story file.
-
-Users are responsible for obtaining and using story files legally.
-
-The fact that Frotz is open-source does not imply that every game playable with Frotz is freely redistributable.
-
----
+- **[CrossInk](https://github.com/uxjulia/CrossInk)** and its contributors, who provide the
+  device support, rendering, input, SD access, activity framework and firmware infrastructure
+  FrotzX3 is built on. For general CrossInk documentation, see the upstream project and the
+  [docs/](docs/) folder.
+- **[Frotz](https://github.com/DavidGriffith/frotz)** and its contributors (Stefan Jokisch, Jim
+  Dunleavy, Martin Frost, David Griffith and others). FrotzX3 includes Frotz-derived source
+  modified for the X3 and CrossInk: platform integration, SD storage, lifecycle and
+  save/restore support, memory behavior suited to the ESP32-C3, and the interfaces used by the
+  X3 UI.
+- The interactive-fiction community and the open-source tools both projects rely on.
 
 ## Documentation
 
-FrotzX3 documentation:
+- [FrotzX3 overview](FROTZX3_README.md)
+- [Integration and porting guide](FROTZX3_INTEGRATION.md)
+- [Patch installer](tools/installer/README.md) · [Updating to a new CrossInk](tools/installer/UPDATING_CROSSINK.md) · [Delta vs. official CrossInk](tools/patches/FROTZX3_DELTA.md)
+- [Release build and source bundle](tools/release/README.md)
+- [Licensing](FROTZX3_LICENSE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [CHANGELOG](CHANGELOG.md)
+- CrossInk documentation under [docs/](docs/)
 
-- [FrotzX3 Public README](FROTZX3_README.md)
-- [Guided Installer](FROTZX3_INSTALLER_README.md)
-- [Integration / Porting Guide](FROTZX3_INTEGRATION.md)
-- [Licensing](FROTZX3_LICENSE.md)
-- [Third-Party Notices](THIRD_PARTY_NOTICES.md)
-
-CrossInk documentation remains available under `docs/` and from the upstream CrossInk project.
-
----
-
-## Development
-
-FrotzX3 is a hobby/open-source project built for the fun of making the XTEINK X3 a genuinely good interactive-fiction device.
-
-Bug reports, compatibility findings, and testing reports are welcome.
-
-When reporting a problem, it is especially useful to include:
-
-- Story filename and Z-machine version.
-- What action triggered the problem.
-- Whether the game was newly started or resumed.
-- Whether save/restore was involved.
-- Serial logs if available.
-- CrossInk/FrotzX3 version or commit (the serial log prints the FrotzX3 version
-  each time a story starts).
-
----
-
-## Credits
-
-FrotzX3 would not exist without the work of:
-
-- The **CrossInk** developers and contributors.
-- The **Frotz** developers and contributors.
-- The broader interactive-fiction community.
-- The open-source tools and libraries used by both projects.
-
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSES/](LICENSES/) for formal attribution.
-
----
-
-## Status
-
-FrotzX3 `v0.9.0-beta.1` is a first public beta under active hobby development.
-
-The core text-adventure experience — including real Z-machine execution, Z3/Z5/Z8 support, saves, rewind, command entry, parser integration, and X3-native controls — is working on physical XTEINK X3 hardware.
-
-Expect continued polish, compatibility testing, and quality-of-life improvements.
+FrotzX3 is a hobby open-source project. A successful compile is not treated as validation;
+testing on a physical X3 is the authoritative test.
