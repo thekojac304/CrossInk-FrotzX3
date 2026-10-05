@@ -91,7 +91,8 @@ try {
     function Export-Repo([string]$RepoDir, [string]$Dest) {
         New-Item -ItemType Directory -Force -Path $Dest | Out-Null
         $tmp = Join-Path $stage 'export.zip'
-        Invoke-Git $RepoDir @('archive', '--format=zip', '-o', $tmp, 'HEAD') | Out-Null
+        # core.autocrlf=false: export the committed (LF) bytes, not a machine-dependent CRLF conversion
+        Invoke-Git $RepoDir @('-c', 'core.autocrlf=false', 'archive', '--format=zip', '-o', $tmp, 'HEAD') | Out-Null
         [IO.Compression.ZipFile]::ExtractToDirectory($tmp, $Dest)
         Remove-Item $tmp
     }
