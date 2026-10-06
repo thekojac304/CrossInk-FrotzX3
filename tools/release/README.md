@@ -39,6 +39,41 @@ pio run -e default
   otherwise the language table printed by `scripts/gen_i18n.py` can raise a
   `UnicodeEncodeError` in the console encoding.
 
+## Logging in release vs. debug builds
+
+Release (`env:default`) builds use `-DENABLE_SERIAL_LOG -DLOG_LEVEL=0`:
+
+- `LOG_ERR` output is compiled in, the crash-report log ring buffer is kept, and
+  the USB serial transport is set up exactly as before.
+- `LOG_INF` and `LOG_DBG` output (and their format strings) is compiled out.
+  This includes FrotzX3's startup, load and save/restore `LOG_INF` lines;
+  fatal interpreter errors are `LOG_ERR` and are kept.
+- `ENABLE_SERIAL_LOG` stays enabled. Removing it was only measured separately
+  and is **not** the release policy: it would also drop `LOG_ERR`, leave the
+  "Last logs" section of crash reports empty and skip USB serial setup.
+
+For verbose logs build `pio run -e debug` (`LOG_LEVEL=2`), or override the
+level in an untracked `platformio.local.ini`. To also enable FrotzX3's
+development diagnostics add `-DFROTZX3_DEBUG_LOG`; they log through `LOG_INF`,
+so the build needs `LOG_LEVEL >= 1` (`env:debug` qualifies):
+
+```powershell
+$env:PLATFORMIO_BUILD_FLAGS = '-DFROTZX3_DEBUG_LOG'
+pio run -e debug
+```
+
+### Measured effect (CrossInk v1.6.1 + FrotzX3 0.9.0-beta.1 only)
+
+Identical v1.6.1 + FrotzX3 source, clean builds, 6,553,600 B app slot:
+
+| `LOG_LEVEL` | Image | RAM | App-slot headroom |
+| --- | --- | --- | --- |
+| 1 (previous) | 6,406,752 B | 89,488 B | 146,848 B |
+| 0 (release) | 6,389,616 B | 89,488 B | 163,984 B |
+
+`LOG_LEVEL=0` saves 17,136 B. These figures apply to the v1.6.1 port only; the
+older base measures differently and its numbers must not be quoted for v1.6.1.
+
 ## Build dependency pinning
 
 Most dependencies in `platformio.ini` are pinned (platform, libraries,
