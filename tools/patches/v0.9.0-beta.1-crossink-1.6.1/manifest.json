@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "frotzx3_version": "0.9.0-beta.1",
+  "frotzx3_source_commit": "18349ee72c84b2c66cfe27947288176c8b321515",
+  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 39 overlay files + the four patched files. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
+  "upstream": {
+    "repository": "https://github.com/uxjulia/CrossInk.git",
+    "commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
+    "commit_subject": "Update release manifests for v1.6.1",
+    "commit_date": "2026-10-04",
+    "version_note": "CrossInk v1.6.1 official release tag (platformio.ini version 1.6.1)",
+    "tag": "v1.6.1"
+  },
+  "required_submodules": [
+    {
+      "path": "assets/tabler-icons",
+      "commit": "8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc",
+      "url": "https://github.com/tabler/tabler-icons.git",
+      "recursive": true
+    },
+    {
+      "path": "freeink-sdk",
+      "commit": "699370183fa3a0e33c9cb83a36f701bbb6022095",
+      "url": "https://github.com/Free-Ink/freeink-sdk.git",
+      "recursive": true
+    }
+  ],
+  "build": {
+    "platformio_environment": "default",
+    "release_version_env": {
+      "CROSSINK_RELEASE_VERSION": "0.9.0-beta.1-ci161-hwtest"
+    },
+    "unset_env": [
+      "CROSSINK_RC_HASH"
+    ],
+    "firmware_output": ".pio/build/default/firmware-x3-x4.bin",
+    "output_name": "FrotzX3-v0.9.0-beta.1-ci161-hwtest-firmware-x3-x4.bin",
+    "expected_mdns_version": "1.14.0",
+    "mdns_pin": {
+      "component": "espressif/mdns",
+      "version": "1.14.0",
+      "mechanism": "scripts/pin_idf_components.py (overlay file) writes an exact-version constraint into .dummy/idf_component.yml; platformio.ini must list it as a pre: extra script"
+    }
+  },
+  "patches": [
+    {
+      "path": "patches/0001-frotzx3-host-integration.patch",
+      "sha256": "67519e982c418936bb2730201ee7a094e196a4fd98c9701a528881ffdb2fe563",
+      "modifies": [
+        "platformio.ini",
+        "scripts/git_branch.py",
+        "src/activities/home/HomeActivity.cpp",
+        "src/MappedInputManager.cpp"
+      ]
+    }
+  ],
+  "expected_results": [
+    {
+      "path": "platformio.ini",
+      "git_blob": "6324d0392e23cf4ef3df3a6ce139d8de94deabb5"
+    },
+    {
+      "path": "scripts/git_branch.py",
+      "git_blob": "febae8cd05201f0d54b2ffee87ec661f61b575a5"
+    },
+    {
+      "path": "src/activities/home/HomeActivity.cpp",
+      "git_blob": "d3a7309925c5cc61c8a290dfd2bbaf02dc6bb79a"
+    },
+    {
+      "path": "src/MappedInputManager.cpp",
+      "git_blob": "7db0a765c4f666710be7198377c741b43f8a8f68"
+    }
+  ],
+  "overlay_files": [
+    {
+      "path": "FROTZX3_INTEGRATION.md",
+      "sha256": "945ecd03977f686ca0ed8bf0225fa9e851a18095b07afdec0edfd934daf17a2b",
+      "bytes": 11088
+    },
+    {
+      "path": "FROTZX3_LICENSE.md",
+      "sha256": "83faf6fbae72fd67513a1f0ed637fbdc55e89f82942ab40d5c28e4c9f5be505a",
+      "bytes": 3576
+    },
+    {
+      "path": "FROTZX3_README.md",
+      "sha256": "f3fc6042ca179342d56adb6379b895166e44c1d228f87f60ceaae27b9bb297b8",
+      "bytes": 2334
+    },
+    {
+      "path": "lib/FrotzX3/library.json",
+      "sha256": "5ecc9a92a203ddfdeaca02724dd03fc65f9aa17f7bad7938490b3d60ff7fdad6",
+      "bytes": 164
+    },
+    {
+      "path": "lib/FrotzX3/README.md",
+      "sha256": "33d93efbe186b2757ba32ab13c87d9213207534816b15d96fcad58b7e9cbec9f",
+      "bytes": 1313
+    },
+    {
+      "path": "lib/FrotzX3/src/buffer.c",
+      "sha256": "b5f614e3273e873e1e42379050066de9a3ce5b02cfdd1963fa597c9d2a83e640",
+      "bytes": 3013
+    },
+    {
+      "path": "lib/FrotzX3/src/err.c",
+      "sha256": "331c687896443b434f19fa302013588cb29af043619bcc258f78fdcaa299f1c5",
+      "bytes": 4095
+    },
+    {
+      "path": "lib/FrotzX3/src/fastmem.c",
+      "sha256": "d36716c91f589965e760c146191ebda5b8253fab9a30d6e989ca49b3194b8fdb",
+      "bytes": 36791
+    },
+    {
+      "path": "lib/FrotzX3/src/files.c",
+      "sha256": "4878f80b2e127722c152147ae0f5b30a0c722d92ff9a4d120b3956d200b82ca6",
+      "bytes": 9477
+    },
+    {
+      "path": "lib/FrotzX3/src/frotz.h",
+      "sha256": "e698ff55a29541b7c83c0a08fc19d8f221f4bebea7a728c9048246acd2e3b325",
+      "bytes": 22039
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzGlobals.c",
+      "sha256": "e735a83577adba7690a9e628b55dfaa16d93d9acd309bc94765130247591ed07",
+      "bytes": 3017
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzPlatform.c",
+      "sha256": "bd2f2dfc37622380748ae6e85b5edd4704fe0e3829653082200c620380d8ba6c",
+      "bytes": 19028
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzX3.cpp",
+      "sha256": "f1e0c851a036a5d25472a9386135326514fc64f67672a9e611d1e41c6f86e8ab",
+      "bytes": 25654
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzX3.h",
+      "sha256": "6873d117ee0ec54926ac23c60926b8436960345ac2001731980f470d33f36478",
+      "bytes": 3347
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzX3Paths.h",
+      "sha256": "cfa0f167765158a03f49cd20e4713597cb07ccd780fe214996f093c1c11c83e8",
+      "bytes": 321
+    },
+    {
+      "path": "lib/FrotzX3/src/git_hash.h",
+      "sha256": "a3710204c4a84b3f57a3bbba41c69aef5d9fda2cedbe54dea843256a27ece0ae",
+      "bytes": 35
+    },
+    {
+      "path": "lib/FrotzX3/src/hotkey.c",
+      "sha256": "5115968f1b56157876560a6a8c2903de233db6c07e5cc27b10311e647c074c9c",
+      "bytes": 5008
+    },
+    {
+      "path": "lib/FrotzX3/src/input.c",
+      "sha256": "7facdca02d2ce7a81dfdab0aec52fb2b9f59264a7015c1c850492f3a7995185e",
+      "bytes": 8411
+    },
+    {
+      "path": "lib/FrotzX3/src/math.c",
+      "sha256": "8cc704d77d446ca48e7a8e883a3a137583f288fd1a03f0a6caedaf1503011d87",
+      "bytes": 4245
+    },
+    {
+      "path": "lib/FrotzX3/src/object.c",
+      "sha256": "c2e03c7fd3b656651af5edac68f4d923146bcb8bb8b8507a445547e74265a82d",
+      "bytes": 39324
+    },
+    {
+      "path": "lib/FrotzX3/src/process.c",
+      "sha256": "d3099dedd08ac81b27435b9d3e75e02b00f95763e1c70a85e50f3bbeed4e430c",
+      "bytes": 16089
+    },
+    {
+      "path": "lib/FrotzX3/src/quetzal.c",
+      "sha256": "bea2f0aefdebd53ae6af99216a2f36c1d7bb894083817bfea16fe4f4d4717baa",
+      "bytes": 18398
+    },
+    {
+      "path": "lib/FrotzX3/src/random.c",
+      "sha256": "85a33c38e4c1c61e50190b5497afc93ca43ead8ee40ae88576b8db133e8a46cd",
+      "bytes": 1926
+    },
+    {
+      "path": "lib/FrotzX3/src/redirect.c",
+      "sha256": "9c0866cd386cded2c2987605da3df5a2cb1135684fbea15cf5847ee8bdb61e5d",
+      "bytes": 3314
+    },
+    {
+      "path": "lib/FrotzX3/src/screen.c",
+      "sha256": "a06f4fa8d42e6eb1adb590bf42057fc3ef1d054ce7f00bc223c322fa71f1661b",
+      "bytes": 36921
+    },
+    {
+      "path": "lib/FrotzX3/src/setup.h",
+      "sha256": "086b16925bad98bfd298cce5eb3dd0e4a198f5d8e9e37249f0a8e99e2e4d5782",
+      "bytes": 1916
+    },
+    {
+      "path": "lib/FrotzX3/src/sound.c",
+      "sha256": "93025db9eb0111619570464d1afe3f3231baab045ba09f649da3cd9e8d25d7e6",
+      "bytes": 4169
+    },
+    {
+      "path": "lib/FrotzX3/src/stream.c",
+      "sha256": "93d479a9c8b5f90dddbd916652005f03fa61b88f4983f3abf7aed00a60ccd9c4",
+      "bytes": 7345
+    },
+    {
+      "path": "lib/FrotzX3/src/table.c",
+      "sha256": "523cf89bbe6238a2685a6d306e0369d5e4e5fa92eae41eabc324b572097c6c41",
+      "bytes": 3942
+    },
+    {
+      "path": "lib/FrotzX3/src/text.c",
+      "sha256": "650e4ec5b8ac21d743dc3ef824e65386012561ca998718b9fddce2d4f4eb8041",
+      "bytes": 24591
+    },
+    {
+      "path": "lib/FrotzX3/src/unused.h",
+      "sha256": "af4a5882bc7ba0b473c027720a38dde4c6f0e18d4bfd8ac1affe2a6f9b26a1f0",
+      "bytes": 401
+    },
+    {
+      "path": "lib/FrotzX3/src/variable.c",
+      "sha256": "c5e4aca610dbc98764a3d1f40aec2983e2a2dba081407f2750b2701677302118",
+      "bytes": 5328
+    },
+    {
+      "path": "LICENSES/CrossInk-MIT.txt",
+      "sha256": "7212963b5b1b5ee34ca158163356beb1e6945dd2cc5d320f1fe7573c424ea640",
+      "bytes": 1067
+    },
+    {
+      "path": "LICENSES/Frotz-AUTHORS.txt",
+      "sha256": "563bc4ed9e25179a03bc6735e5d3b5f50c3a82bc5384fa968f4a057f0accb811",
+      "bytes": 1185
+    },
+    {
+      "path": "LICENSES/Frotz-GPL-2.0-or-later.txt",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+      "bytes": 18092
+    },
+    {
+      "path": "scripts/pin_idf_components.py",
+      "sha256": "8a9c9f8e68f1cb94967dfeaaa0591450a64adf6bf9dd721b4adbf1348cc21923",
+      "bytes": 2765
+    },
+    {
+      "path": "src/activities/frotzx3/FrotzX3Activity.cpp",
+      "sha256": "d5694e2e5b0cadf8d73c3dcb2644cbc1e3eee19857d6c3f4a8b7d2c7580ffb3f",
+      "bytes": 173472
+    },
+    {
+      "path": "src/activities/frotzx3/FrotzX3Activity.h",
+      "sha256": "08ada1a46816e390042d719a86c39029d18cc4365c0038748b1c17e37704e8e0",
+      "bytes": 1628
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "900ff9dd358b0a8c43d5000f135032906fabc40832763dc0ae42ac774a91dc7c",
+      "bytes": 1655
+    }
+  ],
+  "device": "XTEINK X3",
+  "package_status": "build-tested",
+  "hardware_tested": false,
+  "nested_submodules": [
+    {
+      "path": "freeink-sdk/libs/assets/Icons/lucide",
+      "commit": "c81680e066f45b640743ca78ae36cdedda3f0318"
+    }
+  ]
+}

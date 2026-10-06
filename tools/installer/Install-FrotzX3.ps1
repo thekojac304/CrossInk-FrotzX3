@@ -19,6 +19,12 @@
 .PARAMETER FrotzX3Version
   FrotzX3 version to build. Default: newest entry in compatibility.json.
 
+.PARAMETER TargetCrossInkVersion
+  Opt in to a FrotzX3 package built for a specific, NON-default CrossInk release
+  (for example 1.6.1). Such targets are build-tested but not hardware-tested and are never
+  selected unless you pass this parameter. The value must exactly match a "crossink_target"
+  in compatibility.json; the nearest version is never substituted.
+
 .PARAMETER OutputDir
   Where the firmware and log are written. Default: <repository>\dist-installer
 
@@ -41,6 +47,7 @@
 [CmdletBinding()]
 param(
     [string]$FrotzX3Version = '',
+    [string]$TargetCrossInkVersion = '',
     [string]$OutputDir = '',
     [string]$WorkDir = '',
     [switch]$CheckOnly,
@@ -67,7 +74,7 @@ try {
 
     Write-FxStep 'Selecting FrotzX3 release'
     $compat = Get-FxCompatibility
-    $release = Select-FxRelease -Compat $compat -Version $FrotzX3Version
+    $release = Select-FxRelease -Compat $compat -Version $FrotzX3Version -Target $TargetCrossInkVersion
     $packageDir = Join-Path $repoRoot ($release.patch_path -replace '/', '\')
     $manifest = Read-FxPackage -PackageDir $packageDir
     Write-FxInfo "FrotzX3 version:        $($manifest.frotzx3_version)"
@@ -76,6 +83,10 @@ try {
     Write-FxInfo "Status in compatibility list: $($release.status)"
     if ($release.status -ne 'tested') {
         Write-Host '   NOTE: this installer path has not been hardware-tested; treat the result as experimental.' -ForegroundColor Yellow
+    }
+    if ($TargetCrossInkVersion) {
+        Write-Host "   OPT-IN TARGET: CrossInk $TargetCrossInkVersion. Package status '$($release.status)': it compiles, but it has NOT been flashed or tested on an X3." -ForegroundColor Yellow
+        Write-Host '   Do not distribute the resulting firmware as a FrotzX3 release.' -ForegroundColor Yellow
     }
     if ($manifest.frotzx3_version -ne $release.frotzx3_version -or $manifest.upstream.commit -ne $release.crossink_commit) {
         Stop-Fx -Title 'compatibility.json and the patch package disagree.' `

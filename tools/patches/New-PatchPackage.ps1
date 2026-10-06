@@ -17,8 +17,17 @@
   Files are read from Git objects (not the working tree), so the output is
   identical regardless of line-ending settings on the machine running this.
 
+  -RepoDir lets the source commit live in a different clone than this script (used for
+  CrossInk ports that are prepared in a working checkout of official CrossInk). -PackageName
+  overrides the default folder name v<Version> so several packages for one FrotzX3 version
+  (one per CrossInk base) can coexist.
+
 .EXAMPLE
   .\New-PatchPackage.ps1 -Version 0.9.0-beta.1 -BaseCommit cab4f249 -SourceCommit HEAD
+
+  .\New-PatchPackage.ps1 -Version 0.9.0-beta.1 -PackageName v0.9.0-beta.1-crossink-1.6.1 `
+    -RepoDir <port checkout> -BaseCommit 9914146e -SourceCommit HEAD -UpstreamTag v1.6.1 `
+    -PackageStatus build-tested -ReleaseVersion 0.9.0-beta.1-ci161-hwtest
 #>
 [CmdletBinding()]
 param(
@@ -26,7 +35,14 @@ param(
     [Parameter(Mandatory = $true)][string]$BaseCommit,
     [string]$SourceCommit = 'HEAD',
     [string]$UpstreamUrl = 'https://github.com/uxjulia/CrossInk.git',
-    [string]$UpstreamVersionNote = ''
+    [string]$UpstreamVersionNote = '',
+    [string]$RepoDir = '',
+    [string]$PackageName = '',
+    [string]$UpstreamTag = '',
+    [string]$PackageStatus = '',
+    [string]$ReleaseVersion = '',
+    [string]$SourceNote = '',
+    [string[]]$ExtraPatchFiles = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,6 +65,7 @@ $PatchFiles = @(
     'src/MappedInputManager.cpp',
     'src/activities/home/HomeActivity.cpp'
 )
+# -ExtraPatchFiles (port-specific build-tooling fixes) are appended to this list below.
 # Differences that are intentionally NOT part of the portable package.
 $ExcludedRoots = @(
     'README.md',                      # this project's own landing page
@@ -58,6 +75,8 @@ $ExcludedRoots = @(
     'Install-FrotzX3.cmd',            # legacy transplant installer
     'tools/'                          # release/installer/patch tooling itself
 )
+
+$PatchFiles = @($PatchFiles) + @($ExtraPatchFiles)
 
 function Invoke-Git {
     param([string[]]$GitArgs)
@@ -79,13 +98,15 @@ function Test-UnderRoots([string]$Path, [string[]]$Roots) {
 }
 function Get-Sha256([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
 
-$repoRoot = (Invoke-Git @('-C', $PSScriptRoot, 'rev-parse', '--show-toplevel') | Select-Object -First 1).Trim()
+$gitDir = if ($RepoDir) { $RepoDir } else { $PSScriptRoot }
+$repoRoot = (Invoke-Git @('-C', $gitDir, 'rev-parse', '--show-toplevel') | Select-Object -First 1).Trim()
 Set-Location -LiteralPath $repoRoot
 $base = (Invoke-Git @('rev-parse', '--verify', "$BaseCommit^{commit}") | Select-Object -First 1).Trim()
 $src  = (Invoke-Git @('rev-parse', '--verify', "$SourceCommit^{commit}") | Select-Object -First 1).Trim()
 Invoke-Git @('merge-base', '--is-ancestor', $base, $src) | Out-Null   # throws unless base is an ancestor
 
-$pkgDir = Join-Path $PSScriptRoot "v$Version"
+if (-not $PackageName) { $PackageName = "v$Version" }
+$pkgDir = Join-Path $PSScriptRoot $PackageName
 $filesDir = Join-Path $pkgDir 'files'
 $patchDir = Join-Path $pkgDir 'patches'
 if (Test-Path -LiteralPath $filesDir) { Remove-Item -LiteralPath $filesDir -Recurse -Force }
@@ -142,8 +163,30 @@ foreach ($p in ($patched | Sort-Object)) {
 }
 
 # --- Version facts ---------------------------------------------------------------
-$sub = (Invoke-Git @('ls-tree', $base, 'freeink-sdk') | Select-Object -First 1)
-$subSha = ($sub -split '\s+')[2]
+# Every gitlink (submodule) pinned by the base commit. URLs come from the base's .gitmodules.
+$urlByPath = @{}
+$curPath = ''
+foreach ($l in (Invoke-Git @('show', "$base`:.gitmodules"))) {
+    if ($l -match '^\s*path\s*=\s*(.+)$') { $curPath = $Matches[1].Trim() }
+    elseif ($l -match '^\s*url\s*=\s*(.+)$' -and $curPath) { $urlByPath[$curPath] = $Matches[1].Trim() }
+}
+$submodules = @()
+foreach ($l in (Invoke-Git @('ls-tree', '-r', $base))) {
+    if ($l -match '^160000 commit ([0-9a-f]{40})\t(.+)$') {
+        $submodules += [ordered]@{ path = $Matches[2]; commit = $Matches[1]; url = $urlByPath[$Matches[2]]; recursive = $true }
+    }
+}
+if (-not ($submodules | Where-Object { $_.path -eq 'freeink-sdk' })) { throw 'freeink-sdk gitlink not found at base commit' }
+# Nested submodules are only known from an initialised checkout; record them if present.
+$nested = @()
+try {
+    foreach ($l in (Invoke-Git @('submodule', 'status', '--recursive'))) {
+        if ($l -match '^[ +U-]?([0-9a-f]{40}) (\S+)') {
+            $np = $Matches[2]
+            if (-not ($submodules | Where-Object { $_.path -eq $np })) { $nested += [ordered]@{ path = $np; commit = $Matches[1] } }
+        }
+    }
+} catch { }
 $baseSubject = (Invoke-Git @('log', '-1', '--format=%s', $base) | Select-Object -First 1).Trim()
 $baseDate = (Invoke-Git @('log', '-1', '--format=%cs', $base) | Select-Object -First 1).Trim()
 
@@ -151,7 +194,7 @@ $manifest = [ordered]@{
     schema_version     = 1
     frotzx3_version    = $Version
     frotzx3_source_commit = $src
-    frotzx3_source_note = 'Commit whose FrotzX3-owned files and host edits this package reproduces. Excluded paths (README.md, CHANGELOG.md, .gitignore, tools/, legacy installer) are intentionally not part of the package.'
+    frotzx3_source_note = if ($SourceNote) { $SourceNote } else { 'Commit whose FrotzX3-owned files and host edits this package reproduces. Excluded paths (README.md, CHANGELOG.md, .gitignore, tools/, legacy installer) are intentionally not part of the package.' }
     upstream           = [ordered]@{
         repository = $UpstreamUrl
         commit     = $base
@@ -159,19 +202,19 @@ $manifest = [ordered]@{
         commit_date = $baseDate
         version_note = $UpstreamVersionNote
     }
-    required_submodules = @([ordered]@{
-        path = 'freeink-sdk'
-        commit = $subSha
-        url = 'https://github.com/Free-Ink/freeink-sdk.git'
-        recursive = $true
-    })
+    required_submodules = $submodules
     build = [ordered]@{
         platformio_environment = 'default'
-        release_version_env = [ordered]@{ CROSSINK_RELEASE_VERSION = $Version }
+        release_version_env = [ordered]@{ CROSSINK_RELEASE_VERSION = $(if ($ReleaseVersion) { $ReleaseVersion } else { $Version }) }
         unset_env = @('CROSSINK_RC_HASH')
         firmware_output = '.pio/build/default/firmware-x3-x4.bin'
-        output_name = "FrotzX3-v$Version-firmware-x3-x4.bin"
+        output_name = "FrotzX3-v$(if ($ReleaseVersion) { $ReleaseVersion } else { $Version })-firmware-x3-x4.bin"
         expected_mdns_version = '1.14.0'
+        mdns_pin = [ordered]@{
+            component = 'espressif/mdns'
+            version = '1.14.0'
+            mechanism = 'scripts/pin_idf_components.py (overlay file) writes an exact-version constraint into .dummy/idf_component.yml; platformio.ini must list it as a pre: extra script'
+        }
     }
     patches = @([ordered]@{
         path = "patches/$patchName"
@@ -181,6 +224,13 @@ $manifest = [ordered]@{
     expected_results = $expected
     overlay_files = $overlayEntries
 }
+if ($UpstreamTag) { $manifest.upstream.tag = $UpstreamTag }
+if ($PackageStatus) {
+    $manifest.device = 'XTEINK X3'
+    $manifest.package_status = $PackageStatus
+    $manifest.hardware_tested = $false
+}
+if ($nested.Count -gt 0) { $manifest.nested_submodules = $nested }
 $json = $manifest | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText((Join-Path $pkgDir 'manifest.json'), ($json -replace "`r`n", "`n") + "`n", (New-Object Text.UTF8Encoding($false)))
 

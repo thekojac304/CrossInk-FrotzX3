@@ -1,8 +1,24 @@
 {
   "schema": 1,
-  "description": "Which official CrossInk commit each FrotzX3 release is built against. Newest first. Only add an entry after regression and XTEINK X3 hardware testing; a clean patch or a successful compile is not enough.",
+  "description": "Which official CrossInk commit each FrotzX3 release is built against. Newest first, except that entries marked opt_in_only are never chosen by default. Only mark an entry tested (and drop opt_in_only) after regression and XTEINK X3 hardware testing; a clean patch or a successful compile is not enough.",
   "upstream_repository": "https://github.com/uxjulia/CrossInk.git",
   "releases": [
+    {
+      "frotzx3_version": "0.9.0-beta.1",
+      "crossink_commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
+      "crossink_tag": "v1.6.1",
+      "crossink_target": "1.6.1",
+      "crossink_version": "1.6.1 (official release tag v1.6.1, platformio.ini version 1.6.1)",
+      "patch_path": "tools/patches/v0.9.0-beta.1-crossink-1.6.1",
+      "device": "XTEINK X3",
+      "environment": "default",
+      "status": "build-tested",
+      "opt_in_only": true,
+      "build_tested": true,
+      "firmware_hardware_tested": false,
+      "patch_installer_hardware_tested": false,
+      "notes": "Port of FrotzX3 0.9.0-beta.1 to CrossInk v1.6.1. Reconstructs and compiles from official source, but NO firmware from this package has been flashed or tested on an X3. Never selected by default; request it explicitly with Install-FrotzX3.ps1 -TargetCrossInkVersion 1.6.1. Not the public default; the prebuilt release firmware (old base) remains the hardware-tested artifact."
+    },
     {
       "frotzx3_version": "0.9.0-beta.1",
       "crossink_commit": "cab4f24922f05811e7f44be1057f62ea2d978c52",

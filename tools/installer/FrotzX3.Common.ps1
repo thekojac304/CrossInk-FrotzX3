@@ -183,20 +183,47 @@ function Get-FxCompatibility {
     catch { Stop-Fx -Title 'The compatibility list could not be read.' -Details @($_.Exception.Message) }
 }
 
+# Releases that carry "opt_in_only": true (for example a build-tested port to a newer CrossInk that has not
+# been flashed yet) are never chosen by default. They are selected only by an explicit -Target that matches
+# the entry's "crossink_target" exactly (no nearest-version matching).
 function Select-FxRelease {
-    param($Compat, [string]$Version)
+    param($Compat, [string]$Version, [string]$Target = '')
     $releases = @($Compat.releases)
-    if ($Version) {
-        $match = @($releases | Where-Object { $_.frotzx3_version -eq $Version.TrimStart('v') })
+    $isOptIn = { param($r) ($r.PSObject.Properties.Name -contains 'opt_in_only') -and $r.opt_in_only }
+    if ($Target) {
+        $match = @($releases | Where-Object { ($_.PSObject.Properties.Name -contains 'crossink_target') -and $_.crossink_target -eq $Target })
+        if ($Version) { $match = @($match | Where-Object { $_.frotzx3_version -eq $Version.TrimStart('v') }) }
         if ($match.Count -eq 0) {
-            Stop-Fx -Title "FrotzX3 version '$Version' is not in the compatibility list." `
-                -Details @('Available: ' + (($releases | ForEach-Object { $_.frotzx3_version }) -join ', '))
+            $known = @($releases | Where-Object { $_.PSObject.Properties.Name -contains 'crossink_target' } | ForEach-Object { $_.crossink_target })
+            Stop-Fx -Title "No FrotzX3 package is listed for CrossInk target '$Target'." `
+                -Details @('Targets with a package: ' + ($known -join ', '), 'Targets must match exactly; the nearest version is never substituted.') `
+                -NextStep 'Nothing was changed.'
         }
         return $match[0]
     }
-    $usable = @($releases | Where-Object { $_.status -ne 'unsupported' })
+    $standard = @($releases | Where-Object { -not (& $isOptIn $_) })
+    if ($Version) {
+        $match = @($standard | Where-Object { $_.frotzx3_version -eq $Version.TrimStart('v') })
+        if ($match.Count -eq 0) {
+            Stop-Fx -Title "FrotzX3 version '$Version' is not in the compatibility list." `
+                -Details @('Available: ' + (($standard | ForEach-Object { $_.frotzx3_version }) -join ', '))
+        }
+        return $match[0]
+    }
+    $usable = @($standard | Where-Object { $_.status -ne 'unsupported' })
     if ($usable.Count -eq 0) { Stop-Fx -Title 'The compatibility list has no usable FrotzX3 release.' }
     return $usable[0]   # newest first
+}
+
+# Version string compiled into the firmware (CROSSINK_RELEASE_VERSION). Packages may override the
+# FrotzX3 version with a test-only string via build.release_version_env.
+function Get-FxReleaseVersion {
+    param([Parameter(Mandatory = $true)]$Manifest)
+    $rv = $Manifest.build.release_version_env
+    if ($rv -and ($rv.PSObject.Properties.Name -contains 'CROSSINK_RELEASE_VERSION') -and $rv.CROSSINK_RELEASE_VERSION) {
+        return [string]$rv.CROSSINK_RELEASE_VERSION
+    }
+    return [string]$Manifest.frotzx3_version
 }
 
 function Get-FxSha256 {
@@ -322,6 +349,19 @@ function Test-FxSubmoduleCommits {
         }
         Write-FxOk "$($s.path) is at the expected commit ($($s.commit.Substring(0,10)))"
     }
+    # Nested submodules (recorded by newer packages) must also match exactly.
+    if ($Manifest.PSObject.Properties.Name -contains 'nested_submodules') {
+        $st = Invoke-FxGit -Dir $Dest -GitArgs @('submodule', 'status', '--recursive')
+        foreach ($n in @($Manifest.nested_submodules)) {
+            $line = @($st.Output | Where-Object { $_ -match ('\s' + [regex]::Escape($n.path) + '(\s|$)') }) | Select-Object -First 1
+            $got = if ($line -and $line -match '^[ +U-]?([0-9a-f]{40})') { $Matches[1] } else { '(missing)' }
+            if ($got -ne $n.commit) {
+                Stop-Fx -Title "The nested component $($n.path) is not the version FrotzX3 was tested with." `
+                    -Details @("Expected: $($n.commit)", "Found:    $got") -NextStep 'No files were changed.'
+            }
+            Write-FxOk "$($n.path) is at the expected commit ($($n.commit.Substring(0,10)))"
+        }
+    }
 }
 
 # ---------------------------------------------------------------- applying the package
@@ -398,7 +438,7 @@ function Invoke-FxBuild {
         [Parameter(Mandatory = $true)][string]$Dest,
         [Parameter(Mandatory = $true)]$Manifest
     )
-    $version = [string]$Manifest.frotzx3_version
+    $version = Get-FxReleaseVersion -Manifest $Manifest
     $envName = [string]$Manifest.build.platformio_environment
 
     $saved = @{}
@@ -439,7 +479,7 @@ function Test-FxBuildResult {
         [Parameter(Mandatory = $true)]$Manifest,
         [Parameter(Mandatory = $true)][string]$Firmware
     )
-    $version = [string]$Manifest.frotzx3_version
+    $version = Get-FxReleaseVersion -Manifest $Manifest
 
     # 1. espressif/mdns pinned version actually used by the build
     $mdnsYml = Join-Path $Dest 'managed_components\espressif__mdns\idf_component.yml'
