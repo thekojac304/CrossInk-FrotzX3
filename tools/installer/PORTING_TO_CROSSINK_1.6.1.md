@@ -299,3 +299,30 @@ flash 6,375,721 B (97.3%), 163,744 B free in the 6,553,600 B app slot, version s
 The installer-built firmware has not been flashed yet; see `compatibility.json`
 (`patch_installer_hardware_tested`) for its current status.
 
+
+## Verification record, X3 Select/Power false-sleep fix (2026-10-07)
+
+Bug: on the X3, Select is the Power button. `getPowerButtonAction()` in `src/main.cpp` classified
+Power long/short with the generic `getHeldTime()`, which every button shares and which starts at
+the first press of any run of held buttons. A fresh Select press that overlapped another held
+button could start past the 400 ms threshold and sleep at once. This runs before the activity loop,
+so no Frotz change could prevent it. The fix uses the Power-specific press timer
+(`getPowerButtonHeldTime()`; the simulator keeps `getHeldTime()`). On the X3, a diagnostics build
+(`...-powerholdfix-hwtest.bin`) recorded generic 528 ms vs. Power 2 ms (and 527 vs. 2) without
+sleeping, and a real Power hold still slept at 403 ms. The Frotz release-wait, exit-release and
+unclaimed-Select fixes also passed in that build.
+
+Port commit `c401b0a6f8d8f1da055825a8f74a7ff8ac813b28` (tree `612a84dc6a94de46a791d7774fff97e9598e539d`)
+is `1ac427f` plus that build's `main.cpp` and `FrotzX3Activity.cpp`/`.h` changes, with every temporary
+`[X3INPUT]` diagnostic removed. No other line differs. The regenerated package changes only
+the patch (SHA-256 `03030ae0...`), the `src/main.cpp` expected blob (`c1be0423...`), the two Frotz
+overlay files and the source commit.
+
+Fresh clone at `230372ee` into `C:\fxrc\repo`, then the default run
+`Install-FrotzX3.ps1 -WorkDir C:\fxrc\work -OutputDir C:\fxrc\out -KeepWorkDir` (no target or version
+override): selected 0.9.0-beta.2 / v1.6.1 `9914146e`, submodules verified, package verified (40 overlay
+files, 1 patch), applied cleanly, every result matched. Source tree `612a84dc...`, identical to the port
+commit's tree (submodules as gitlinks). Build: PASS, 6,389,328 B, RAM 89,360 B (27.3%), flash
+6,375,191 B (97.3%), 164,272 B free in the 6,553,600 B app slot, version string `0.9.0-beta.2`,
+`espressif/mdns` 1.14.0, SHA-256 `2f40ebb2cbcc2b4fc753b45962d8ee6b846645b55c5bf9c2dc67c00591bac676`
+(release candidate). It has not been flashed yet.
