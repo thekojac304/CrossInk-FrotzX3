@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "frotzx3_version": "0.9.0-beta.1",
-  "frotzx3_source_commit": "752abbebd6c96498155d4295e8dd769c5742e443",
+  "frotzx3_version": "0.9.0-beta.2",
+  "frotzx3_source_commit": "1ac427f6ec73a40b6b353c84d0941ab793377f8c",
   "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 40 overlay files + the five patched files, including the FrotzX3 contiguous-memory guardrail. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
   "upstream": {
     "repository": "https://github.com/uxjulia/CrossInk.git",
@@ -28,13 +28,13 @@
   "build": {
     "platformio_environment": "default",
     "release_version_env": {
-      "CROSSINK_RELEASE_VERSION": "0.9.0-beta.1-ci161-hwtest"
+      "CROSSINK_RELEASE_VERSION": "0.9.0-beta.2"
     },
     "unset_env": [
       "CROSSINK_RC_HASH"
     ],
     "firmware_output": ".pio/build/default/firmware-x3-x4.bin",
-    "output_name": "FrotzX3-v0.9.0-beta.1-ci161-hwtest-firmware-x3-x4.bin",
+    "output_name": "FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin",
     "expected_mdns_version": "1.14.0",
     "mdns_pin": {
       "component": "espressif/mdns",
@@ -85,17 +85,17 @@
     },
     {
       "path": "FROTZX3_LICENSE.md",
-      "sha256": "83faf6fbae72fd67513a1f0ed637fbdc55e89f82942ab40d5c28e4c9f5be505a",
-      "bytes": 3576
+      "sha256": "bd91a557a18ace24def64c6134357a45df10a0a199c8549f15fcc043007f6a6b",
+      "bytes": 4002
     },
     {
       "path": "FROTZX3_README.md",
-      "sha256": "f3fc6042ca179342d56adb6379b895166e44c1d228f87f60ceaae27b9bb297b8",
-      "bytes": 2334
+      "sha256": "fa85fef36d21cd244fa51725938b895c3e375271ca410ed72da877044a793bb8",
+      "bytes": 3467
     },
     {
       "path": "lib/FrotzX3/library.json",
-      "sha256": "5ecc9a92a203ddfdeaca02724dd03fc65f9aa17f7bad7938490b3d60ff7fdad6",
+      "sha256": "e044fb8e719ea6d8f49daa789ba2694e27bc482a67f907c9ab40d74052afdd78",
       "bytes": 164
     },
     {
@@ -140,7 +140,7 @@
     },
     {
       "path": "lib/FrotzX3/src/FrotzX3.cpp",
-      "sha256": "f1e0c851a036a5d25472a9386135326514fc64f67672a9e611d1e41c6f86e8ab",
+      "sha256": "03e23c1e065b07d437defa6cd7a12d4c29af0434d084ac8a5890da7882417333",
       "bytes": 25654
     },
     {

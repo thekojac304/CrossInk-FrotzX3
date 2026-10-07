@@ -1,5 +1,5 @@
 /* Host test for the FrotzX3 contiguous dynamic-memory preflight
- * (tools/patches/v0.9.0-beta.1-crossink-1.6.1/files/lib/FrotzX3/src/FrotzX3MemGuard.h).
+ * (tools/patches/v0.9.0-beta.2-crossink-1.6.1/files/lib/FrotzX3/src/FrotzX3MemGuard.h).
  *
  * Dependency-free so it runs with any C or C++ compiler; see README.md.
  */

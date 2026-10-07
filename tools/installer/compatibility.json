@@ -4,12 +4,12 @@
   "upstream_repository": "https://github.com/uxjulia/CrossInk.git",
   "releases": [
     {
-      "frotzx3_version": "0.9.0-beta.1",
+      "frotzx3_version": "0.9.0-beta.2",
       "crossink_commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
       "crossink_tag": "v1.6.1",
       "crossink_target": "1.6.1",
       "crossink_version": "1.6.1 (official release tag v1.6.1, platformio.ini version 1.6.1)",
-      "patch_path": "tools/patches/v0.9.0-beta.1-crossink-1.6.1",
+      "patch_path": "tools/patches/v0.9.0-beta.2-crossink-1.6.1",
       "device": "XTEINK X3",
       "environment": "default",
       "status": "tested",

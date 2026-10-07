@@ -16,18 +16,24 @@ hardware compatibility.
 The picker recognizes `.z3` through `.z8`, listing up to 16 stories. This does
 not promise compatibility with every story or every Z-machine feature.
 
-## Installation - Beta (`v0.9.0-beta.1`)
+## Installation - Beta (`v0.9.0-beta.2`)
+
+**Supported CrossInk base:** official CrossInk **v1.6.1**, exact commit
+`9914146eeae7b46b300f475a16c32426fc02ec1f`. This FrotzX3 release was
+hardware-validated on an XTEINK X3 on that base only. It is not validated on any
+other CrossInk release; every future CrossInk release needs its own port and its
+own X3 hardware validation before it is marked supported.
 
 **Recommended:** download the prebuilt, hardware-tested firmware
-(`FrotzX3-v0.9.0-beta.1-firmware-x3-x4.bin`) from the GitHub release and install
+(`FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin`) from the GitHub release and install
 it with CrossInk's documented firmware-update methods. See **Installation** in
 the main [README](README.md).
 
-**Experimental:** the patch installer (`tools/installer/Install-FrotzX3.ps1`)
-downloads official CrossInk, checks out the exact supported commit, applies the
-FrotzX3 patch package, and builds a firmware file locally. It has not been
-hardware-tested as an install method and is not the recommended path yet.
-Building from a source checkout also works; see the main README.
+**Alternative:** the patch installer (`tools/installer/Install-FrotzX3.ps1` in the
+FrotzX3 project repository) downloads official CrossInk, checks out the exact
+supported commit above, applies the FrotzX3 patch package, and builds a firmware
+file locally. It defaults to that supported base. Its documentation in the
+project repository states its current test status.
 
 [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md) covers developer integration,
 storage layout, and physical-X3 verification.
@@ -35,6 +41,21 @@ storage layout, and physical-X3 verification.
 **No games included.** Supply legally obtained Z-machine story files directly
 in `/adventures` on SD. This project grants no redistribution rights for
 commercial Infocom games or other stories.
+
+## Story memory requirements
+
+FrotzX3 allocates a story's dynamic memory as one contiguous block, and the
+ESP32-C3 has no PSRAM. Before allocating, it checks that the largest allocatable
+block is at least the story's dynamic memory plus a 1,024 B margin. If not, it
+refuses cleanly with **"Not enough contiguous memory for this story."** instead of
+attempting the allocation.
+
+- Hardware-validated through **Lost Pig at 42,554 B** of dynamic memory (the
+  largest story validated on the X3), plus Zork and Varicella.
+- The Z-machine format allows up to 65,534 B of dynamic memory. This build does
+  **not** guarantee that every story up to that theoretical maximum will fit; a
+  story that needs more contiguous memory than is available is refused with the
+  message above.
 
 ## License and attribution
 

@@ -620,7 +620,7 @@ bool setRestorePathOnStart(const char* path)
 
 const char* version()
 {
-    return "FrotzX3 0.9.0-beta.1";
+    return "FrotzX3 0.9.0-beta.2";
 }
 
 

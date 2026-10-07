@@ -1,6 +1,6 @@
-# FrotzX3 0.9.0-beta.1 patch package for CrossInk v1.6.1
+# FrotzX3 0.9.0-beta.2 patch package for CrossInk v1.6.1
 
-Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.1` build.
+Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.2` build.
 
 > **Status: hardware-validated on an XTEINK X3 (`compatibility.json` status `tested`).**
 > The first hardware test (`FrotzX3-v0.9.0-beta.1-crossink-1.6.1-hwtest.bin`, SHA-256
@@ -30,7 +30,7 @@ Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.1` build.
 | Required submodules | `freeink-sdk` @ `699370183fa3a0e33c9cb83a36f701bbb6022095`, `assets/tabler-icons` @ `8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc`; nested `freeink-sdk/libs/assets/Icons/lucide` @ `c81680e066f45b640743ca78ae36cdedda3f0318` |
 | `espressif/mdns` | pinned to `1.14.0` by `scripts/pin_idf_components.py` (overlay file), listed as a `pre:` extra script by the patch; the installer fails the build if another version resolves |
 | Release logging | `[env:default]` is patched to `-DLOG_LEVEL=0` (ERR only; `ENABLE_SERIAL_LOG`, serial setup and the crash-report ring buffer unchanged). Image 6,389,616 B, RAM 89,488 B vs. 6,406,752 B at `LOG_LEVEL=1`; see `tools/release/README.md` |
-| Release version env | `CROSSINK_RELEASE_VERSION=0.9.0-beta.1-ci161-hwtest` (test-only string so the firmware cannot be mistaken for a release), `CROSSINK_RC_HASH` unset |
+| Release version env | `CROSSINK_RELEASE_VERSION=0.9.0-beta.2`, `CROSSINK_RC_HASH` unset (the hardware-test images used test-only `-ci161-...-hwtest` strings; the package builds the clean release string) |
 
 ## Contents
 
@@ -43,7 +43,7 @@ patches/0001-frotzx3-host-integration.patch
 files/                                FrotzX3-owned files, copied verbatim (overlay)
 ```
 
-The 40 overlay files are the v0.9.0-beta.1 package files, except `FrotzX3Activity.cpp`, which carries
+The 40 overlay files are the v0.9.0-beta.1 package files, except the version strings (`FrotzX3.cpp`, `library.json`) and docs (`FROTZX3_README.md`, `FROTZX3_LICENSE.md`) updated for `0.9.0-beta.2`, and except `FrotzX3Activity.cpp`, which carries
 the failure-screen fix, and `fastmem.c` plus the new `FrotzX3MemGuard.h`, which add the contiguous-memory
 preflight (see [`tools/installer/MEMORY_BUDGET.md`](../../installer/MEMORY_BUDGET.md)). The preflight was
 added after the checklist above and was then hardware-validated on the X3 (Lost Pig, Zork and Varicella
@@ -73,7 +73,7 @@ git apply --check --whitespace=nowarn <path>\patches\0001-frotzx3-host-integrati
 git apply         --whitespace=nowarn <path>\patches\0001-frotzx3-host-integration.patch
 Copy-Item -Recurse -Force <path>\files\* .
 git submodule update --init --recursive
-$env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.1-ci161-hwtest'
+$env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.2'
 pio run -e default
 ```
 
@@ -92,10 +92,11 @@ The package is generated from a working checkout of official v1.6.1 that has the
 committed on top (the source commit is recorded in `manifest.json`):
 
 ```powershell
-tools\patches\New-PatchPackage.ps1 -Version 0.9.0-beta.1 `
-  -PackageName v0.9.0-beta.1-crossink-1.6.1 -RepoDir <port checkout> `
-  -BaseCommit 9914146eeae7b46b300f475a16c32426fc02ec1f -SourceCommit HEAD `
-  -UpstreamTag v1.6.1 -PackageStatus build-tested -ReleaseVersion 0.9.0-beta.1-ci161-hwtest
+tools\patches\New-PatchPackage.ps1 -Version 0.9.0-beta.2 `
+  -PackageName v0.9.0-beta.2-crossink-1.6.1 -RepoDir <port checkout> `
+  -BaseCommit 9914146eeae7b46b300f475a16c32426fc02ec1f -SourceCommit <port commit> `
+  -UpstreamTag v1.6.1 -PackageStatus tested -HardwareTested `
+  -ExtraPatchFiles src/main.cpp,scripts/git_branch.py
 ```
 
 ## Support policy

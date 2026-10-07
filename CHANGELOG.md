@@ -1,19 +1,30 @@
 ## [Unreleased]
 
+FrotzX3 `0.9.0-beta.2` on official CrossInk v1.6.1. The release date is filled in when it is published.
+
 ### Added
 
-- Added an experimental FrotzX3 patch package (`tools/patches/`) and Windows patch installer (`tools/installer/`). The installer downloads official CrossInk, checks out the exact supported commit, applies FrotzX3, and builds a firmware file locally; `Test-FrotzX3Compatibility.ps1` checks candidate CrossInk versions, and `compatibility.json` records the supported CrossInk commit. The installer has not been hardware-tested and the prebuilt release firmware remains the recommended install.
+- FrotzX3 now supports official CrossInk **v1.6.1** (exact commit `9914146eeae7b46b300f475a16c32426fc02ec1f`). It is delivered as a patch package (`tools/patches/v0.9.0-beta.2-crossink-1.6.1/`) applied to that commit by the Windows patch installer (`tools/installer/Install-FrotzX3.ps1`), which now defaults to v1.6.1. `compatibility.json` records the supported commit; any other CrossInk commit is refused until it has its own package and its own X3 hardware validation.
+- Before a story's dynamic memory is allocated, FrotzX3 checks that a large enough contiguous block is free (the story's dynamic memory plus a 1 KiB margin) and otherwise stops with "Not enough contiguous memory for this story." instead of attempting the allocation. A `malloc()` failure after the check shows the same message. `tools/installer/MEMORY_BUDGET.md` records the budget; a new CrossInk base must meet it before it is marked supported.
+- Added `tools/release/New-InstallerSourceBundle.ps1`, which creates the complete-source ZIP for a FrotzX3 firmware release: the exact CrossInk v1.6.1 tree the firmware was built from (with FrotzX3 applied), all submodule sources, the installer and patch package, and the exact revisions and build command.
 
 ### Changed
 
-- FrotzX3 is versioned `0.9.0-beta.1` for its first public beta. Its verbose development diagnostics (per-command timing, object-tree and context-candidate dumps) are now compiled out unless `FROTZX3_DEBUG_LOG` is defined, fatal interpreter errors are always logged, and an unreachable prototype UI block was removed; gameplay behavior is unchanged.
-- Added `tools/release/New-SourceBundle.ps1`, which creates a complete-source ZIP (main repository plus submodules) to accompany FrotzX3 firmware releases, and pinned the `espressif/mdns` build dependency to `1.14.0` so rebuilds resolve the same ESP-IDF component. Official release builds set `CROSSINK_RELEASE_VERSION=0.9.0-beta.1`.
-- FrotzX3 on CrossInk v1.6.1 now checks, before allocating a story's dynamic memory, that a large enough contiguous block is free (plus a 1 KiB margin), and otherwise stops with "Not enough contiguous memory for this story." instead of attempting the allocation. Future CrossInk bases must meet the measured memory budget in `tools/installer/MEMORY_BUDGET.md` before they are marked supported. Hardware-validated on the XTEINK X3 (normal startup of Lost Pig, Zork and Varicella, and the forced-failure path). A `malloc()` failure after the check shows the same message instead of allocator numbers.
-- Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled. The README was rewritten as the public project landing page.
+- FrotzX3 is versioned `0.9.0-beta.2`. The installer builds with the clean release version string (previously a test-only `-hwtest` string), and ignores environment variables such as `PLATFORMIO_BUILD_FLAGS` that would change the firmware.
+- Home now releases its cover image cache before FrotzX3 starts, and the ESP32-C3 render stack in `ActivityManager` is 12,288 B (was 16,384 B), so large stories keep the contiguous memory they need on CrossInk v1.6.1. The cover redraws normally when you leave FrotzX3.
+- FrotzX3's verbose development diagnostics are compiled out unless `FROTZX3_DEBUG_LOG` is defined, fatal interpreter errors are always logged, and release builds use error-only logging (`LOG_LEVEL=0`).
+- Pinned the `espressif/mdns` build dependency to `1.14.0` so rebuilds resolve the same ESP-IDF component.
+- Clarified FrotzX3 licensing and attribution (Frotz-derived code is GPL-2.0-or-later, CrossInk portions keep their MIT license) and the corresponding-source requirements for firmware releases; no games are bundled. The README is the public project landing page.
+
+### Fixed
+
+- Fixed a memory regression on CrossInk v1.6.1 where Lost Pig (42,554 B of dynamic memory) could fail to start because Home's cover cache and the larger render stack fragmented the RAM it needs.
+- The FROTZ START FAILED screen no longer overprints its title with the error reason.
 
 ### Validation
 
-- FrotzX3 `0.9.0-beta.1` passed hardware validation on a physical XTEINK X3 (build at `a045d1fd`). Z3, Z5 and Z8 (Lost Pig) story files were exercised, along with the game picker, Select/power-button behavior, T9 keyboard, autocomplete/context suggestions, parser interaction, transcript paging, manual save/load, rewind, Adventure Log, clean exit/re-entry, and resume. This covers the story files tested, not every Z-machine game.
+- FrotzX3 on CrossInk v1.6.1 passed hardware validation on a physical XTEINK X3 (cold boot, Home, EPUB Reader, Settings, File Browser, Frotz picker, Lost Pig, Zork, Varicella, save/load, rewind, exit and re-entry, sleep/wake, Select/Power behavior, Home cover redraw), and the memory guard passed both normal startup and its forced-failure path. Lost Pig (42,554 B) is the largest dynamic-memory requirement validated; the Z-machine maximum is 65,534 B and this build does not claim every story up to that size will fit. This covers CrossInk v1.6.1 and the story files tested, not every Z-machine game or any other CrossInk release.
+- The earlier FrotzX3 `0.9.0-beta.1` (CrossInk 1.5.0 base, build at `a045d1fd`) passed hardware validation on a physical XTEINK X3: Z3, Z5 and Z8 (Lost Pig) story files, the game picker, Select/power-button behavior, T9 keyboard, autocomplete/context suggestions, parser interaction, transcript paging, manual save/load, rewind, Adventure Log, clean exit/re-entry, and resume. That result does not carry over to CrossInk v1.6.1.
 
 ## [v1.5.0] - 2026-08-08
 

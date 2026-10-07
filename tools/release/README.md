@@ -8,36 +8,36 @@ matching complete source package is produced.
 
 ## Why a separate source ZIP
 
-GitHub's automatic "Source code (zip / tar.gz)" archives do not include
-submodule contents. This repository needs `freeink-sdk` and its nested
-`libs/assets/Icons/lucide` submodule to build, so those archives cannot rebuild
-the firmware. **Official FrotzX3 binary releases should be paired with the
-supplied complete-source ZIP**, `FrotzX3-v<version>-source-complete.zip`. That
-ZIP is the intended reproducible source package for that firmware release.
+From `0.9.0-beta.2`, the firmware is built from **official CrossInk v1.6.1** plus the FrotzX3 patch
+package (`tools/patches/v0.9.0-beta.2-crossink-1.6.1/`), not from the root tree of this repository (the
+older CrossInk 1.5.0-based development tree). GitHub's automatic "Source code (zip / tar.gz)" archives
+therefore contain neither the CrossInk base nor the submodules (`freeink-sdk` with its nested
+`libs/assets/Icons/lucide`, and `assets/tabler-icons`), and cannot rebuild the firmware. **Official
+FrotzX3 binary releases must be paired with the complete-source ZIP**,
+`FrotzX3-v<version>-source-complete.zip`: the exact tree that was built, every submodule, the installer and
+package, and `SOURCE_BUNDLE_MANIFEST.txt`. That ZIP is the corresponding source for the GPL.
 
 ## Official release build
 
-Run from the repository root (from a clone made with `--recurse-submodules`, or
-from the extracted source ZIP). Use a short path; deep paths can exceed Windows
-limits during the ESP-IDF build.
+The release firmware is produced by the patch installer so that the distributed file and its source are
+the same thing. Run from a clean clone of this repository, with `-KeepWorkDir` so the built tree can be
+packaged. Use a short path for the work folder; deep paths can exceed Windows limits during the ESP-IDF build.
 
 ```powershell
-$env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.1'
-Remove-Item Env:CROSSINK_RC_HASH -ErrorAction SilentlyContinue   # RC hash would take precedence
-pio run -e default
+powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1 `
+  -KeepWorkDir -WorkDir C:\fx3\work -OutputDir C:\fx3\out
 ```
 
-- `CROSSINK_RELEASE_VERSION` is read by `scripts/git_branch.py`. Without it the
-  default env reports `<crossink version>-dev+<branch>`; with it the firmware
-  reports exactly `0.9.0-beta.1`. A leading `v` is stripped. CrossInk's own
-  `[crossink] version` in `platformio.ini` is not changed.
-- Output: `.pio/build/default/firmware-x3-x4.bin` (identical copies:
-  `firmware.bin` and `firmware-x3-x4-v0.9.0-beta.1.bin`).
-- The first build downloads the toolchain and libraries and recompiles the
-  ESP-IDF libraries (several minutes).
-- If redirecting PlatformIO output to a file on Windows, set `PYTHONUTF8=1`;
-  otherwise the language table printed by `scripts/gen_i18n.py` can raise a
-  `UnicodeEncodeError` in the console encoding.
+- The installer sets `CROSSINK_RELEASE_VERSION` from the package manifest (`0.9.0-beta.2`) and unsets
+  `CROSSINK_RC_HASH`; `scripts/git_branch.py` then reports exactly that version (a leading `v` is stripped).
+  Without it the default env reports `<crossink version>-dev+<branch>`. Environment variables such as
+  `PLATFORMIO_BUILD_FLAGS` are ignored for the run so they cannot change the firmware.
+- Output: `FrotzX3-v<version>-firmware-x3-x4.bin` (built from `.pio/build/default/firmware-x3-x4.bin`).
+- The first build downloads the toolchain and libraries and recompiles the ESP-IDF libraries (several minutes).
+- Rebuilding the same source does **not** reproduce the same SHA-256 (build-time strings such as `__TIME__`
+  are embedded). The released binary is therefore the exact file that was hardware-tested, not a later rebuild.
+- If redirecting PlatformIO output to a file on Windows, set `PYTHONUTF8=1`; otherwise the language table
+  printed by `scripts/gen_i18n.py` can raise a `UnicodeEncodeError` in the console encoding.
 
 ## Logging in release vs. debug builds
 
@@ -62,7 +62,7 @@ $env:PLATFORMIO_BUILD_FLAGS = '-DFROTZX3_DEBUG_LOG'
 pio run -e debug
 ```
 
-### Measured effect (CrossInk v1.6.1 + FrotzX3 0.9.0-beta.1 only)
+### Measured effect (CrossInk v1.6.1 + FrotzX3 only)
 
 Identical v1.6.1 + FrotzX3 source, clean builds, 6,553,600 B app slot:
 
@@ -95,27 +95,30 @@ resolves different versions, pin them the same way in `PINNED_COMPONENTS`.
 ## Creating the complete source bundle
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\release\New-SourceBundle.ps1
+powershell -ExecutionPolicy Bypass -File tools\release\New-InstallerSourceBundle.ps1 `
+  -SourceTree C:\fx3\work -FirmwarePath C:\fx3\out\FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin
 ```
 
-Defaults: version `0.9.0-beta.1`, output `dist-publish\FrotzX3-v0.9.0-beta.1-source-complete.zip`
-(`dist-publish\` is git-ignored). The script:
+`-SourceTree` is the work folder the installer built in. Output:
+`dist-publish\FrotzX3-v<version>-source-complete.zip` (`dist-publish\` is git-ignored). The script:
 
-1. verifies the working tree is clean;
-2. verifies the branch is `release/v<version>` and that the FrotzX3 version
-   strings match (`-AllowAnyBranch` skips only the branch check);
-3. runs `git submodule update --init --recursive` and checks that every
-   submodule is clean and at its recorded commit;
-4. exports the committed content of the main repository and of each submodule
-   with `git archive` into a temporary staging directory;
-5. removes Git metadata and build/IDE/cache directories and fails if any
-   binary, story, save or credential-type file is present;
-6. writes `SOURCE_BUNDLE_MANIFEST.txt` (exact commits and build command) and
-   creates the ZIP with a fixed timestamp and sorted entries, so the same
-   commit yields the same ZIP;
+1. checks that this repository is clean and verifies the package against its manifest checksums;
+2. verifies that `-SourceTree` is exactly the supported CrossInk commit plus the package: `HEAD` equals the
+   manifest commit, submodules are clean and at their recorded commits, every patched file matches its
+   recorded git blob, every overlay file matches its SHA-256, and no other file differs;
+3. records the git tree hash of that source state;
+4. copies the working-tree files (patched files included) of the main tree and of every submodule, and the
+   committed installer, package, compatibility list and tests into `frotzx3-build-tools/`;
+5. removes Git metadata and build/IDE/cache directories and fails if any binary, story, save, log or
+   credential-type file is present;
+6. writes `SOURCE_BUNDLE_MANIFEST.txt` (exact commits, tree hash, firmware SHA-256 if given, build
+   commands) and creates the ZIP with a fixed timestamp and sorted entries;
 7. prints the output path and SHA-256.
 
-Publish the printed SHA-256 next to the ZIP. Third-party packages that
-PlatformIO downloads at build time (platform, libraries listed in
-`platformio.ini`, Arduino-ESP32 and the toolchain) are fetched by version and
-are not copied into the ZIP.
+Publish the printed SHA-256 next to the ZIP (for example in `SHA256SUMS.txt`). Third-party packages that
+PlatformIO downloads at build time (platform, libraries listed in `platformio.ini`, Arduino-ESP32 and the
+toolchain) are fetched by version and are not copied into the ZIP.
+
+`New-SourceBundle.ps1` is the earlier script for `v0.9.0-beta.1`, whose firmware was built directly from
+this repository's root tree (CrossInk 1.5.0 base). It does not describe the 1.6.1-based firmware and is
+kept only for that release.

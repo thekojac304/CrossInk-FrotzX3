@@ -92,7 +92,7 @@ carry over to any other CrossInk version. v1.6.1 is supported because it passed 
 | `freeink-sdk` | `699370183fa3a0e33c9cb83a36f701bbb6022095` (old base: `1ff020263cd2202ea79ce3eb811f5ac8489b8cde`) |
 | New top-level submodule | `assets/tabler-icons` @ `8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc` (v3.46.0) |
 | Old base | `cab4f24922f05811e7f44be1057f62ea2d978c52` (v1.5.0 + 3 commits) |
-| Package | `tools/patches/v0.9.0-beta.1-crossink-1.6.1/` |
+| Package | `tools/patches/v0.9.0-beta.2-crossink-1.6.1/` |
 
 (The task text spelled the ref `upstream/v1.6.1`; tags are not remote-tracking refs, so
 the verified ref is `v1.6.1`. `git fetch upstream --tags` made it available.)
@@ -179,7 +179,7 @@ the Power **fallback**, only the first `wasPressed(Confirm)` call in that frame 
 `true`. `FrotzX3Activity::loop()` reads Confirm in mutually exclusive mode branches, so a
 second call in the same frame is not expected, but this is the one place where behaviour
 could differ and it is the first thing to check (see the hardware checklist in the final
-report and in `tools/patches/v0.9.0-beta.1-crossink-1.6.1/README.md`). A physical-Confirm
+report and in `tools/patches/v0.9.0-beta.2-crossink-1.6.1/README.md`). A physical-Confirm
 press is unaffected (that branch returns `true` before the guard).
 
 ## Source preservation check (FrotzX3 0.9.0-beta.1 approved source vs v1.6.1 port)

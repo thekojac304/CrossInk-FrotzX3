@@ -13,17 +13,18 @@
   It never flashes a device. Your own folders are not modified; all work happens in a
   temporary folder that is deleted on success.
 
-  This installer has NOT been hardware-tested as an install method. For the
-  hardware-tested firmware, use the prebuilt .bin from the GitHub release.
+  The supported CrossInk base is v1.6.1 (commit 9914146e); no other commit is accepted.
+  Firmware produced by this installer has NOT itself been flashed and tested on an X3 yet.
+  For the hardware-tested firmware, use the prebuilt .bin from the GitHub release.
 
 .PARAMETER FrotzX3Version
   FrotzX3 version to build. Default: newest entry in compatibility.json.
 
 .PARAMETER TargetCrossInkVersion
-  Opt in to a FrotzX3 package built for a specific, NON-default CrossInk release
-  (for example 1.6.1). Such targets are build-tested but not hardware-tested and are never
-  selected unless you pass this parameter. The value must exactly match a "crossink_target"
-  in compatibility.json; the nearest version is never substituted.
+  Name the CrossInk release to build for (for example 1.6.1, which is also the default).
+  Entries marked "opt_in_only" in compatibility.json are build-tested only and are selected
+  only through this parameter. The value must exactly match a "crossink_target" in
+  compatibility.json; the nearest version is never substituted.
 
 .PARAMETER OutputDir
   Where the firmware and log are written. Default: <repository>\dist-installer

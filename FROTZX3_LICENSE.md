@@ -37,10 +37,16 @@ scripts, configuration, and required dependency or submodule sources. Record
 exact revisions and build instructions. Unmodified upstream Frotz or a moving
 branch is not the matching source.
 
-GitHub's automatic source archives omit submodule contents. Official FrotzX3
-binary releases are therefore paired with a complete-source ZIP,
-`FrotzX3-v<version>-source-complete.zip`, created by
-`tools/release/New-SourceBundle.ps1` (see `tools/release/README.md`).
+GitHub's automatic source archives omit submodule contents and do not contain the
+CrossInk base the firmware is built from. Official FrotzX3 binary releases are
+therefore paired with a complete-source ZIP,
+`FrotzX3-v<version>-source-complete.zip`. It contains the exact source tree the
+firmware was built from (official CrossInk with the FrotzX3 patch package
+applied), the source of every required submodule, the FrotzX3 patch installer and
+patch package that reproduce that tree, and a `SOURCE_BUNDLE_MANIFEST.txt` with the
+exact revisions and build command. It is created by
+`tools/release/New-InstallerSourceBundle.ps1` in the FrotzX3 project repository
+(see `tools/release/README.md`).
 
 Follow GPLv2 section 3 (or the applicable later version) for your distribution
 method. If using a written source offer instead of accompanying source, satisfy

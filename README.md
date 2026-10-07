@@ -13,8 +13,10 @@ interpreter.
 > **No games are included.** You must supply your own legally obtained Z-machine
 > story files. See [Adding games](#adding-games).
 
-> **Public beta: `v0.9.0-beta.1`.** FrotzX3 runs on a physical XTEINK X3, but this is
-> a first public beta. Expect rough edges and read [Known limitations](#known-limitations).
+> **Public beta: `v0.9.0-beta.2`, for CrossInk v1.6.1.** FrotzX3 runs on a physical XTEINK X3,
+> but this is a beta. Expect rough edges and read [Known limitations](#known-limitations).
+> The supported CrossInk base is the exact official **v1.6.1** commit
+> (`9914146eeae7b46b300f475a16c32426fc02ec1f`); no other CrossInk version is supported.
 
 **Contents:** [Install](#install) · [Adding games](#adding-games) · [Controls](#controls) ·
 [Saves and rewind](#saves-and-rewind) · [Compatibility](#compatibility) ·
@@ -53,14 +55,14 @@ CrossInk supports other devices, and the firmware image is the shared X3/X4 buil
 
 FrotzX3 is a CrossInk-based firmware build with the interactive-fiction player added.
 Installing it **replaces your current CrossInk firmware** with FrotzX3's build (based on
-CrossInk 1.5.0 plus three upstream commits). Your SD card contents are not touched. To go
-back, install official CrossInk again.
+official CrossInk **v1.6.1**). Your SD card contents are not touched. To go back, install
+official CrossInk again.
 
 ### Recommended beta install
 
 Use the prebuilt, hardware-tested firmware.
 
-1. Download `FrotzX3-v0.9.0-beta.1-firmware-x3-x4.bin` from the
+1. Download `FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin` from the
    [Releases page](https://github.com/thekojac304/CrossInk-FrotzX3/releases).
 2. Optional: check that its SHA-256 matches the value in the release notes
    (`Get-FileHash <file> -Algorithm SHA256` in PowerShell).
@@ -74,16 +76,20 @@ Use the prebuilt, hardware-tested firmware.
    The CrossInk web installer at inky.crossink.dev installs *official* CrossInk, not FrotzX3.
 4. After the device restarts, open **FrotzX3** from the Home menu.
 
-### Experimental patch installer
+### Patch installer (builds locally)
 
-> Experimental: **not** hardware-tested as an install method and not the recommended path yet.
+> Status: the v1.6.1 package and the firmware built from it are hardware-validated on the
+> X3. Firmware produced by the installer itself is still being validated on a device, so the
+> prebuilt firmware above remains the recommended path.
 
 `tools/installer/Install-FrotzX3.ps1` (Windows PowerShell) builds the firmware locally
-instead of downloading a prebuilt one. It:
+instead of downloading a prebuilt one. By default it targets the supported base, CrossInk
+v1.6.1. It:
 
 1. downloads official CrossInk,
-2. checks out the exact supported CrossInk commit,
-3. applies the FrotzX3 patch package,
+2. checks out the exact supported commit (`9914146eeae7b46b300f475a16c32426fc02ec1f`) and
+   refuses any other,
+3. verifies and applies the FrotzX3 patch package (every file is checked against its SHA-256),
 4. builds locally with PlatformIO, and
 5. writes the firmware `.bin` and its SHA-256 (it does **not** flash your device).
 
@@ -92,9 +98,9 @@ powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1
 ```
 
 Requires Git and PlatformIO. Details, options and troubleshooting:
-[tools/installer/README.md](tools/installer/README.md). This architecture is intended to
-make future CrossInk updates easier: a new CrossInk release only needs a small patch update
-and a compatibility entry ([UPDATING_CROSSINK.md](tools/installer/UPDATING_CROSSINK.md)).
+[tools/installer/README.md](tools/installer/README.md). A future CrossInk release needs a
+new package and its own hardware validation before it is marked supported
+([UPDATING_CROSSINK.md](tools/installer/UPDATING_CROSSINK.md)).
 
 An older "transplant" installer (`Install-FrotzX3.cmd`) is still in the repository for
 reference; see [FROTZX3_INSTALLER_README.md](FROTZX3_INSTALLER_README.md). Prefer the
@@ -187,55 +193,64 @@ All of it lives under `/adventures/saves/` on the SD card:
   games may expose interpreter or interface behavior that has not been tested, and output is
   limited to plain text (no graphics, styles or non-ASCII characters).
 
+### Story memory
+
+A story's dynamic memory must fit in one contiguous block of the X3's RAM (the ESP32-C3 has no
+PSRAM). Before allocating it, FrotzX3 checks that the largest allocatable block is at least the
+story's dynamic memory plus 1,024 B, and otherwise stops with **"Not enough contiguous memory
+for this story."** instead of risking the allocation.
+
+- Hardware-validated through **Lost Pig, which needs 42,554 B** (plus Zork and Varicella).
+- The Z-machine format allows up to 65,534 B of dynamic memory. This build does **not**
+  guarantee that every story up to that theoretical maximum will fit; larger stories are
+  covered by the runtime check above, not by a guarantee.
+
 ## Known limitations
 
-- Beta software, tested only on the XTEINK X3.
+- Beta software, tested only on the XTEINK X3, and only on CrossInk v1.6.1.
+- Stories that need close to the Z-machine maximum of 65,534 B of dynamic memory may be
+  refused with "Not enough contiguous memory for this story."; only stories up to Lost Pig's
+  42,554 B are hardware-validated.
 - Firmware flash space is nearly full on the X3 (the image uses roughly 97% of the OTA
   partition), so there is little room for new features.
 - Compatibility is not universal; see above.
 - At most 16 story files are listed in the picker, and only from `/adventures`.
 - The keyboard has letters only (no digits or punctuation). Number choices use the single-key pad.
 - Z4+ stories have no status line display; Z3 stories show room and score/moves in the header.
-- The experimental patch installer is not yet the default install method and has not been hardware-tested.
-- Future CrossInk releases may need a small FrotzX3 compatibility update.
+- Firmware built by the patch installer is still being validated on a device; the prebuilt
+  firmware is the recommended install.
+- Future CrossInk releases need a FrotzX3 compatibility update and their own hardware
+  validation before they are supported.
 
 ---
 
 ## Building from source
 
+Releases from `0.9.0-beta.2` are built from **official CrossInk v1.6.1** plus the FrotzX3
+patch package, not from this repository's root source tree (which is the older CrossInk
+1.5.0-based development tree used for `v0.9.0-beta.1`). The supported way to build is the
+[patch installer](#patch-installer-builds-locally); the **complete-source ZIP** attached to
+each release contains the exact tree that was built.
+
 You need [Git](https://git-scm.com/) and [PlatformIO Core](https://platformio.org/install/cli).
-The firmware depends on a submodule (`freeink-sdk`, which has its own submodule), so clone
-with submodules:
 
 ```powershell
-git clone --recurse-submodules https://github.com/thekojac304/CrossInk-FrotzX3.git
+git clone https://github.com/thekojac304/CrossInk-FrotzX3.git
 cd CrossInk-FrotzX3
-pio run -e default
+powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1
 ```
 
-If you already cloned without submodules, run `git submodule update --init --recursive` first.
 The first build downloads the ESP32 toolchain and compiles the framework (about 10 minutes
-on a fast PC). The image is written to `.pio/build/default/firmware-x3-x4.bin`
-(`firmware.bin` is the same image). To flash over USB with PlatformIO:
-`pio run -e default -t upload`. If `pio` is not on your PATH, use
-`& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe"`.
+on a fast PC). The firmware is written to `dist-installer\` with its SHA-256. Rebuilds of the
+same source are not byte-identical (build time strings are embedded), so compare source
+revisions, not hashes, when reproducing a release.
 
-GitHub's automatic "Source code" archives omit submodule contents and cannot be built on
-their own. Use `git clone --recurse-submodules`, or the **complete-source ZIP** attached to
-each release.
-
-### Official release builds
-
-```powershell
-$env:CROSSINK_RELEASE_VERSION = '0.9.0-beta.1'
-Remove-Item Env:CROSSINK_RC_HASH -ErrorAction SilentlyContinue
-pio run -e default
-```
-
-Each release pairs the firmware with `FrotzX3-v<version>-source-complete.zip` (the
-repository plus submodules at the release commit; no Git data, build output, games or saves).
-See [tools/release/README.md](tools/release/README.md) for how it is made and how
-`espressif/mdns` is pinned to 1.14.0 for reproducible builds.
+GitHub's automatic "Source code" archives omit submodule contents and do not contain the
+CrossInk base the firmware is built from. Use the **complete-source ZIP** attached to each
+release (`FrotzX3-v<version>-source-complete.zip`: the built source tree, every submodule,
+the installer and patch package, and the exact revisions and build command; no Git data,
+build output, games or saves). See [tools/release/README.md](tools/release/README.md) for how
+it is made and how `espressif/mdns` is pinned to 1.14.0 for reproducible builds.
 
 For developers: [FROTZX3_INTEGRATION.md](FROTZX3_INTEGRATION.md) explains how FrotzX3 attaches
 to CrossInk, and [tools/patches/FROTZX3_DELTA.md](tools/patches/FROTZX3_DELTA.md) lists every
@@ -253,7 +268,7 @@ Bug reports, compatibility findings and test reports are welcome via
 - What you were doing when the problem happened.
 - Whether the game was new or resumed, and whether saving, loading or rewinding was involved.
 - Serial log, if you have one. The log prints the FrotzX3 version each time a story starts.
-- Your FrotzX3 version (`0.9.0-beta.1`) and your device.
+- Your FrotzX3 version (`0.9.0-beta.2`) and your device.
 
 ---
 

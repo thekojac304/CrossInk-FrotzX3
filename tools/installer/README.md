@@ -1,18 +1,22 @@
 # FrotzX3 patch installer (experimental)
 
-> **Status: experimental.** This builds a firmware file from official CrossInk plus
-> the FrotzX3 patch package. It has **not** been hardware-tested as an install
-> method. The recommended beta install is the **prebuilt, hardware-tested firmware**
-> attached to the GitHub release. This installer does **not** flash your device.
+> **Status: experimental install path.** This builds a firmware file from official CrossInk
+> v1.6.1 plus the FrotzX3 patch package. The package and the firmware built from the same
+> source are hardware-validated on an XTEINK X3; firmware produced by this installer has not
+> yet itself been flashed (`patch_installer_hardware_tested` in `compatibility.json`). The
+> recommended beta install is the **prebuilt, hardware-tested firmware** attached to the GitHub
+> release. This installer does **not** flash your device.
 
 ## What it does
 
 1. Checks that Git and PlatformIO are installed.
 2. Downloads official CrossInk (<https://github.com/uxjulia/CrossInk>) into a temporary folder.
-3. Checks out the exact CrossInk commit this FrotzX3 release supports, and verifies it.
+3. Checks out the exact CrossInk commit this FrotzX3 release supports (v1.6.1,
+   `9914146eeae7b46b300f475a16c32426fc02ec1f`), and verifies it. Any other commit stops the run.
 4. Downloads CrossInk's required components (submodules) and verifies their commits.
 5. Checks the FrotzX3 patch package against its checksums, then applies it.
-6. Builds the firmware with `pio run -e default` and `CROSSINK_RELEASE_VERSION` set.
+6. Builds the firmware with `pio run -e default` and `CROSSINK_RELEASE_VERSION` set. Environment
+   variables that would alter the build (such as `PLATFORMIO_BUILD_FLAGS`) are ignored for the run.
 7. Verifies the build (version string, `espressif/mdns` 1.14.0, FrotzX3 present).
 8. Copies `FrotzX3-v<version>-firmware-x3-x4.bin` to `dist-installer\` and prints its SHA-256.
 
@@ -48,21 +52,24 @@ Useful options:
 | `-FrotzX3Version <v>` | Choose a release from `compatibility.json` (default: newest). |
 | `-TargetCrossInkVersion <v>` | Select a package by exact `crossink_target` in `compatibility.json` (for example `1.6.1`); the nearest version is never substituted. |
 
-## Hardware-validated target: CrossInk v1.6.1
+## Supported target: CrossInk v1.6.1
 
-`compatibility.json` lists a package for official CrossInk **v1.6.1**
-(`tools/patches/v0.9.0-beta.1-crossink-1.6.1/`), status `tested` and no longer `opt_in_only`: the
-firmware built from this source passed XTEINK X3 hardware validation (see
-`PORTING_TO_CROSSINK_1.6.1.md`). Firmware produced by the installer itself has not been flashed
-(`patch_installer_hardware_tested: false`). Because the entry is newest and no longer opt-in, a default run now
-selects it. Future CrossInk releases need their own hardware validation before being marked supported.
-To select it explicitly:
+`compatibility.json` lists one package: FrotzX3 `0.9.0-beta.2` for official CrossInk **v1.6.1**
+(`tools/patches/v0.9.0-beta.2-crossink-1.6.1/`), status `tested`. It is the default, so a plain run
+selects it and checks out commit `9914146eeae7b46b300f475a16c32426fc02ec1f`. The firmware built from
+this source passed XTEINK X3 hardware validation, including the contiguous-memory guard (see
+`PORTING_TO_CROSSINK_1.6.1.md` and `MEMORY_BUDGET.md`). Firmware produced by the installer itself has
+not been flashed yet (`patch_installer_hardware_tested: false`). **No other CrossInk version is
+supported**; a future CrossInk release needs its own package and its own hardware validation before it
+is marked supported. To name the target explicitly:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1 -TargetCrossInkVersion 1.6.1
 ```
 
-The firmware is named with a test-only version string and must not be distributed as a release.
+The firmware carries the clean release version string (`0.9.0-beta.2`) and is written as
+`FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin`. An existing file of that name in the output folder is replaced.
+No game files are involved at any point.
 
 ## After the build
 

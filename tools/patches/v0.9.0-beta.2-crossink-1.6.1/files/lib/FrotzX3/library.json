@@ -1,6 +1,6 @@
 {
   "name": "FrotzX3",
-  "version": "0.9.0-beta.1",
+  "version": "0.9.0-beta.2",
   "description": "Embedded Z-machine interpreter for CrossInk/XTEINK X3",
   "build": {
     "srcDir": "src"

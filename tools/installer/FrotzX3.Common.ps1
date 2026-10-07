@@ -441,11 +441,24 @@ function Invoke-FxBuild {
     $version = Get-FxReleaseVersion -Manifest $Manifest
     $envName = [string]$Manifest.build.platformio_environment
 
+    # PlatformIO reads these from the environment and merges them into the build, so a leftover
+    # PLATFORMIO_BUILD_FLAGS (for example -DFROTZX3_DEBUG_LOG) would silently change the firmware.
+    $buildInfluencing = @(
+        'PLATFORMIO_BUILD_FLAGS', 'PLATFORMIO_BUILD_UNFLAGS', 'PLATFORMIO_SRC_BUILD_FLAGS',
+        'PLATFORMIO_BUILD_SRC_FLAGS', 'PLATFORMIO_BUILD_SRC_UNFLAGS', 'PLATFORMIO_SRC_FILTER',
+        'PLATFORMIO_BUILD_SRC_FILTER', 'PLATFORMIO_BUILD_DIR', 'PLATFORMIO_EXTRA_SCRIPTS',
+        'PLATFORMIO_LIB_EXTRA_DIRS', 'PLATFORMIO_DEFAULT_ENVS', 'PLATFORMIO_ENV_DEFAULT')
     $saved = @{}
-    foreach ($n in 'CROSSINK_RELEASE_VERSION', 'CROSSINK_RC_HASH', 'PYTHONUTF8', 'PYTHONIOENCODING') {
+    foreach ($n in (@('CROSSINK_RELEASE_VERSION', 'CROSSINK_RC_HASH', 'PYTHONUTF8', 'PYTHONIOENCODING') + $buildInfluencing)) {
         $saved[$n] = [Environment]::GetEnvironmentVariable($n, 'Process')
     }
     try {
+        foreach ($n in $buildInfluencing) {
+            if ($saved[$n]) {
+                Write-FxInfo "Ignoring environment variable $n for this build (it would change the firmware)."
+                [Environment]::SetEnvironmentVariable($n, $null, 'Process')
+            }
+        }
         $env:CROSSINK_RELEASE_VERSION = $version
         Remove-Item Env:CROSSINK_RC_HASH -ErrorAction SilentlyContinue   # an RC hash would override the release version
         $env:PYTHONUTF8 = '1'
