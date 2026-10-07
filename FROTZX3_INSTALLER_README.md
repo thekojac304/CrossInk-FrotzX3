@@ -1,6 +1,6 @@
 # Install FrotzX3 into another CrossInk checkout (legacy transplant installer)
 
-> **Legacy.** This older installer copies FrotzX3 files into an existing CrossInk checkout and patches its Home menu. It has been superseded by the experimental patch installer in [tools/installer/](tools/installer/README.md), which starts from a pinned official CrossInk commit and builds a firmware file. Neither installer is the recommended beta install; use the prebuilt release firmware.
+> **Legacy.** This older installer copies FrotzX3 files into an existing CrossInk checkout and patches its Home menu. It has been superseded by the patch installer in [tools/installer/](tools/installer/README.md), which starts from a pinned official CrossInk commit and builds a firmware file. The recommended paths are the prebuilt release firmware or the patch installer.
 
 
 ## Recommended: Double-click Install-FrotzX3.cmd

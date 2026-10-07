@@ -1,11 +1,12 @@
-# FrotzX3 patch installer (experimental)
+# FrotzX3 patch installer
 
-> **Status: experimental install path.** This builds a firmware file from official CrossInk
-> v1.6.1 plus the FrotzX3 patch package. The package and the firmware built from the same
-> source are hardware-validated on an XTEINK X3; firmware produced by this installer has not
-> yet itself been flashed (`patch_installer_hardware_tested` in `compatibility.json`). The
-> recommended beta install is the **prebuilt, hardware-tested firmware** attached to the GitHub
-> release. This installer does **not** flash your device.
+> **Status: tested.** This builds a firmware file from official CrossInk v1.6.1 plus the
+> FrotzX3 patch package. The 0.9.0-beta.2 release firmware is the exact output of this installer
+> (default options, fresh clone) and passed XTEINK X3 hardware testing
+> (`patch_installer_hardware_tested: true` in `compatibility.json`). The prebuilt firmware attached
+> to the GitHub release is the easiest install; use this installer if you prefer to build locally.
+> It does **not** flash your device. Rebuilds are not byte-identical to the release file because
+> build time is embedded.
 
 ## What it does
 
@@ -58,8 +59,8 @@ Useful options:
 (`tools/patches/v0.9.0-beta.2-crossink-1.6.1/`), status `tested`. It is the default, so a plain run
 selects it and checks out commit `9914146eeae7b46b300f475a16c32426fc02ec1f`. The firmware built from
 this source passed XTEINK X3 hardware validation, including the contiguous-memory guard (see
-`PORTING_TO_CROSSINK_1.6.1.md` and `MEMORY_BUDGET.md`). Firmware produced by the installer itself has
-not been flashed yet (`patch_installer_hardware_tested: false`). **No other CrossInk version is
+`PORTING_TO_CROSSINK_1.6.1.md` and `MEMORY_BUDGET.md`). The installer path itself was
+hardware-tested (`patch_installer_hardware_tested: true`). **No other CrossInk version is
 supported**; a future CrossInk release needs its own package and its own hardware validation before it
 is marked supported. To name the target explicitly:
 

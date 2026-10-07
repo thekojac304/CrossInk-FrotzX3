@@ -296,8 +296,8 @@ FrotzX3 0.9.0-beta.2 / CrossInk v1.6.1 `9914146e`, submodules verified, package 
 to port commit `1ac427f`'s tree (submodules as gitlinks). Build: PASS, 6,389,856 B, RAM 89,360 B (27.3%),
 flash 6,375,721 B (97.3%), 163,744 B free in the 6,553,600 B app slot, version string `0.9.0-beta.2`,
 `espressif/mdns` 1.14.0, SHA-256 `ec5ace1a4caf29fa1cc9a302b5c9e3fcd23c0b8b119d999fd3cdb83f5753562b`.
-The installer-built firmware has not been flashed yet; see `compatibility.json`
-(`patch_installer_hardware_tested`) for its current status.
+The installer-built firmware was later flashed; see `compatibility.json`
+(`patch_installer_hardware_tested`) and the release-candidate record below.
 
 
 ## Verification record, X3 Select/Power false-sleep fix (2026-10-07)
@@ -325,4 +325,9 @@ files, 1 patch), applied cleanly, every result matched. Source tree `612a84dc...
 commit's tree (submodules as gitlinks). Build: PASS, 6,389,328 B, RAM 89,360 B (27.3%), flash
 6,375,191 B (97.3%), 164,272 B free in the 6,553,600 B app slot, version string `0.9.0-beta.2`,
 `espressif/mdns` 1.14.0, SHA-256 `2f40ebb2cbcc2b4fc753b45962d8ee6b846645b55c5bf9c2dc67c00591bac676`
-(release candidate). It has not been flashed yet.
+(release candidate).
+
+**Hardware result (2026-10-07):** this exact binary was flashed and PASSED on an XTEINK X3: boot, Home,
+Frotz picker, Lost Pig New Game repeatedly, overlap case (hold Right, tap Select) without false sleep,
+exit/re-entry, real long Power on Home sleeps, save/load, Home cover redraw. It is published unchanged
+as `FrotzX3-v0.9.0-beta.2-firmware-x3-x4.bin`, and `patch_installer_hardware_tested` is `true`.

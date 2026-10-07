@@ -1,6 +1,6 @@
 ## [Unreleased]
 
-FrotzX3 `0.9.0-beta.2` on official CrossInk v1.6.1. The release date is filled in when it is published.
+FrotzX3 `0.9.0-beta.2` on official CrossInk v1.6.1. Released 2026-10-07.
 
 ### Added
 
@@ -20,9 +20,11 @@ FrotzX3 `0.9.0-beta.2` on official CrossInk v1.6.1. The release date is filled i
 
 - Fixed a memory regression on CrossInk v1.6.1 where Lost Pig (42,554 B of dynamic memory) could fail to start because Home's cover cache and the larger render stack fragmented the RAM it needs.
 - The FROTZ START FAILED screen no longer overprints its title with the error reason.
+- Fixed an X3-only false sleep: Select (shared with Power) pressed while another button was held could put the device to sleep immediately, because `main.cpp` classified Power presses with the shared button timer instead of the Power-specific one. FrotzX3 also now waits for button release before taking Select actions, suppresses stray releases after leaving Frotz (Home no longer auto-opens the last-read book), and ignores unclaimed Select presses. A real long Power press still sleeps normally.
 
 ### Validation
 
+- The final release candidate (SHA-256 `2f40ebb2...`, the exact file published) passed X3 testing: boot, Home, Frotz picker, Lost Pig New Game repeatedly, the hold-Right/tap-Select overlap case, exit and re-entry, real long Power sleep on Home, save/load and Home cover redraw. The patch installer path is hardware-tested.
 - FrotzX3 on CrossInk v1.6.1 passed hardware validation on a physical XTEINK X3 (cold boot, Home, EPUB Reader, Settings, File Browser, Frotz picker, Lost Pig, Zork, Varicella, save/load, rewind, exit and re-entry, sleep/wake, Select/Power behavior, Home cover redraw), and the memory guard passed both normal startup and its forced-failure path. Lost Pig (42,554 B) is the largest dynamic-memory requirement validated; the Z-machine maximum is 65,534 B and this build does not claim every story up to that size will fit. This covers CrossInk v1.6.1 and the story files tested, not every Z-machine game or any other CrossInk release.
 - The earlier FrotzX3 `0.9.0-beta.1` (CrossInk 1.5.0 base, build at `a045d1fd`) passed hardware validation on a physical XTEINK X3: Z3, Z5 and Z8 (Lost Pig) story files, the game picker, Select/power-button behavior, T9 keyboard, autocomplete/context suggestions, parser interaction, transcript paging, manual save/load, rewind, Adventure Log, clean exit/re-entry, and resume. That result does not carry over to CrossInk v1.6.1.
 

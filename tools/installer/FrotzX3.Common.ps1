@@ -1,4 +1,4 @@
-# Shared helpers for the experimental FrotzX3 patch installer.
+# Shared helpers for the FrotzX3 patch installer.
 # Dot-sourced by Install-FrotzX3.ps1 and Test-FrotzX3Compatibility.ps1.
 # Written for Windows PowerShell 5.1 and PowerShell 7.
 

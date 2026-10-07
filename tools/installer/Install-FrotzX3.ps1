@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  EXPERIMENTAL: builds FrotzX3 firmware from official CrossInk source plus the FrotzX3 patch package.
+  Builds FrotzX3 firmware from official CrossInk source plus the FrotzX3 patch package.
 
 .DESCRIPTION
   1. Downloads official CrossInk (https://github.com/uxjulia/CrossInk) into a temporary folder.
@@ -14,8 +14,8 @@
   temporary folder that is deleted on success.
 
   The supported CrossInk base is v1.6.1 (commit 9914146e); no other commit is accepted.
-  Firmware produced by this installer has NOT itself been flashed and tested on an X3 yet.
-  For the hardware-tested firmware, use the prebuilt .bin from the GitHub release.
+  The v1.6.1 firmware this installer produces was hardware-tested on an XTEINK X3.
+  Rebuilds are not byte-identical to the prebuilt release .bin (build time is embedded).
 
 .PARAMETER FrotzX3Version
   FrotzX3 version to build. Default: newest entry in compatibility.json.
@@ -70,8 +70,8 @@ $exitCode = 1
 try {
     Initialize-FxLog -Path (Join-Path $OutputDir "FrotzX3-install-$stamp.log")
     Write-Host ''
-    Write-Host 'FrotzX3 patch installer  (EXPERIMENTAL - builds a firmware file only; never flashes)' -ForegroundColor Yellow
-    Write-Host 'For the hardware-tested firmware, use the prebuilt .bin from the GitHub release instead.'
+    Write-Host 'FrotzX3 patch installer  (builds a firmware file only; never flashes)' -ForegroundColor Yellow
+    Write-Host 'The prebuilt .bin from the GitHub release is the easiest install; this builds the same firmware locally.'
 
     Write-FxStep 'Selecting FrotzX3 release'
     $compat = Get-FxCompatibility
@@ -83,7 +83,7 @@ try {
     Write-FxInfo "CrossInk commit:        $($manifest.upstream.commit)"
     Write-FxInfo "Status in compatibility list: $($release.status)"
     if ($release.status -ne 'tested') {
-        Write-Host '   NOTE: this installer path has not been hardware-tested; treat the result as experimental.' -ForegroundColor Yellow
+        Write-Host '   NOTE: this package is not marked tested; treat the result as experimental.' -ForegroundColor Yellow
     }
     if ($TargetCrossInkVersion -and $release.status -ne 'tested') {
         Write-Host "   OPT-IN TARGET: CrossInk $TargetCrossInkVersion. Package status '$($release.status)': it compiles, but it has NOT been flashed or tested on an X3." -ForegroundColor Yellow
@@ -177,7 +177,7 @@ try {
     Write-Host ''
     Write-Host 'This file was NOT flashed. To install it, use CrossInk''s documented SD-card'
     Write-Host 'firmware update (Settings > System > SD Card Firmware Update) or a USB flasher.'
-    Write-Host 'This build path is experimental; the prebuilt release firmware is the hardware-tested one.'
+    Write-Host 'Rebuilds are not byte-identical to the prebuilt release firmware (build time is embedded).'
     Write-FxLog "RESULT: firmware=$out sha256=$hash size=$size ram='$($build.Ram)' flash='$($build.Flash)' mdns=$mdns crossink=$sha"
     $succeeded = $true; $exitCode = 0
 }
