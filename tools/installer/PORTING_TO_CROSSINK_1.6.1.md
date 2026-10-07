@@ -264,3 +264,18 @@ RAM 89,488 B (27.3%), flash 6,375,533 B (97.3%), 163,936 B free in the 6,553,600
 (project folder name, build date/time, ELF SHA-256), the `Software Info` `__TIME__` string, and the image's trailing
 SHA-256 digest. No code or data byte differs. The binary is therefore not byte-identical to the flashed image
 (`__TIME__` is embedded), but is functionally equivalent.
+
+## Verification record, memory guardrail package (2026-10-06)
+
+The guardrail (contiguous-memory preflight plus plain-language `malloc()`-failure message; see
+[`MEMORY_BUDGET.md`](MEMORY_BUDGET.md)) passed hardware validation on the X3: normal startup of Lost Pig,
+Zork and Varicella PASS, forced-failure probe PASS (clean refusal before allocation, FROTZ START FAILED screen
+shows "Not enough contiguous memory for this story.", no crash, watchdog reset, corruption or partial startup).
+The package was regenerated from port commit `752abbebd6c96498155d4295e8dd769c5742e443`.
+
+Reconstruction with `Install-FrotzX3.ps1` (default target, fresh clone of v1.6.1 `9914146e`): staged tree
+`165a71974dbf2e71f72d7d18ee564d7db356127d`, identical to the source commit's tree. Host memory-guard tests pass
+(C and C++). Build (`CROSSINK_RELEASE_VERSION=0.9.0-beta.1-ci161-hwtest`): PASS, 6,389,888 B, RAM 89,360 B
+(27.3%), flash 6,375,761 B (97.3%), 163,712 B free in the 6,553,600 B app slot, SHA-256
+`96ff34cb4d333f73a69fa888004056291bfd76858f4c5714e8752102604b8a1d`. The hardware-tested probe images were
+separate scratch builds (`__TIME__` strings make SHAs non-reproducible), so this SHA is not one of theirs.

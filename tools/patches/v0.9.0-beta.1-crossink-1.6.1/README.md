@@ -14,7 +14,8 @@ Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.1` build.
 > 5,048 B remaining (peak use ~7,240 B).
 > The cleaned final build (`...-crossink-1.6.1-final-hwtest.bin`, SHA-256
 > `1e63d288ea94800cb9b1662a05fde7a701d8bb70c580865c8a29f5752ecd685e`) passed the full hardware
-> checklist with no regressions, and this package reproduces its source exactly.
+> checklist with no regressions. This package reproduces that source plus the contiguous-memory
+> guardrail, which also passed hardware validation (normal startup and forced-failure path; see Contents).
 > **Validated for CrossInk v1.6.1 only; future CrossInk releases still require explicit hardware
 > validation before being marked supported.** Details:
 > [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
@@ -42,8 +43,11 @@ patches/0001-frotzx3-host-integration.patch
 files/                                FrotzX3-owned files, copied verbatim (overlay)
 ```
 
-The 39 overlay files are the v0.9.0-beta.1 package files, except `FrotzX3Activity.cpp`, which carries
-the failure-screen fix. The host-integration edits were re-made against
+The 40 overlay files are the v0.9.0-beta.1 package files, except `FrotzX3Activity.cpp`, which carries
+the failure-screen fix, and `fastmem.c` plus the new `FrotzX3MemGuard.h`, which add the contiguous-memory
+preflight (see [`tools/installer/MEMORY_BUDGET.md`](../../installer/MEMORY_BUDGET.md)). The preflight was
+added after the checklist above and was then hardware-validated on the X3 (Lost Pig, Zork and Varicella
+start normally; a forced-failure build refuses them cleanly with the FROTZ START FAILED screen). The host-integration edits were re-made against
 v1.6.1 (plus the cover release and 12 KiB render stack), and one build-tooling fix (`scripts/git_branch.py`, below); see [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
 
 ## Windows build fix (`scripts/git_branch.py`)

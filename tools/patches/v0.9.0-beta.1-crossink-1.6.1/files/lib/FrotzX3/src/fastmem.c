@@ -31,6 +31,7 @@
 #include "frotz.h"
 #include <stdint.h>
 #include "esp_heap_caps.h"
+#include "FrotzX3MemGuard.h"
 
 #ifdef MSDOS_16BIT
 
@@ -86,6 +87,9 @@ extern int frotz_hal_sync_save(void);
 extern void frotz_hal_close_save(void);
 
 extern void frotz_debug_log(
+    const char *message);
+
+extern void frotz_error_log(
     const char *message);
 
 /*
@@ -724,27 +728,55 @@ void init_memory (void)
         if (h_dynamic_size < 64)
             os_fatal ("Invalid dynamic memory size");
 
+        /*
+         * Preflight: refuse the story before malloc() if no block is
+         * large enough. malloc() ends up searching MALLOC_CAP_DEFAULT
+         * heaps, so query the same capabilities.
+         */
+        {
+            size_t largest_block =
+                heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+
+            if (!frotzx3_dynmem_fits(h_dynamic_size,
+                                     FROTZX3_DYNMEM_MARGIN,
+                                     largest_block)) {
+                char detail[96];
+
+                snprintf(
+                    detail,
+                    sizeof(detail),
+                    "dynmem preflight: need %u + margin %u, largest %u",
+                    (unsigned) h_dynamic_size,
+                    (unsigned) FROTZX3_DYNMEM_MARGIN,
+                    (unsigned) largest_block
+                );
+
+                frotz_error_log(detail);
+                os_fatal(FROTZX3_DYNMEM_ERROR);
+            }
+        }
+
         new_zmp = (zbyte far *) malloc(h_dynamic_size);
 
         if (new_zmp == NULL) {
-            static char oom_message[128];
-
-            size_t free_heap =
-                heap_caps_get_free_size(MALLOC_CAP_8BIT);
-
-            size_t largest_block =
-                heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+            /*
+             * The preflight passed but the heap changed before malloc().
+             * Details go to the error log; the user gets the same plain
+             * message as the preflight refusal.
+             */
+            char detail[96];
 
             snprintf(
-                oom_message,
-                sizeof(oom_message),
-                "DYN OOM D:%u F:%u L:%u",
+                detail,
+                sizeof(detail),
+                "dynmem malloc failed: need %u, free %u, largest %u",
                 (unsigned) h_dynamic_size,
-                (unsigned) free_heap,
-                (unsigned) largest_block
+                (unsigned) heap_caps_get_free_size(MALLOC_CAP_8BIT),
+                (unsigned) heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)
             );
 
-            os_fatal(oom_message);
+            frotz_error_log(detail);
+            os_fatal(FROTZX3_DYNMEM_ERROR);
         }
 
         /*

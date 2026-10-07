@@ -8,6 +8,7 @@
 
 - FrotzX3 is versioned `0.9.0-beta.1` for its first public beta. Its verbose development diagnostics (per-command timing, object-tree and context-candidate dumps) are now compiled out unless `FROTZX3_DEBUG_LOG` is defined, fatal interpreter errors are always logged, and an unreachable prototype UI block was removed; gameplay behavior is unchanged.
 - Added `tools/release/New-SourceBundle.ps1`, which creates a complete-source ZIP (main repository plus submodules) to accompany FrotzX3 firmware releases, and pinned the `espressif/mdns` build dependency to `1.14.0` so rebuilds resolve the same ESP-IDF component. Official release builds set `CROSSINK_RELEASE_VERSION=0.9.0-beta.1`.
+- FrotzX3 on CrossInk v1.6.1 now checks, before allocating a story's dynamic memory, that a large enough contiguous block is free (plus a 1 KiB margin), and otherwise stops with "Not enough contiguous memory for this story." instead of attempting the allocation. Future CrossInk bases must meet the measured memory budget in `tools/installer/MEMORY_BUDGET.md` before they are marked supported. Hardware-validated on the XTEINK X3 (normal startup of Lost Pig, Zork and Varicella, and the forced-failure path). A `malloc()` failure after the check shows the same message instead of allocator numbers.
 - Clarified FrotzX3 licensing, attribution, installation documentation, and corresponding-source requirements for firmware releases; no games are bundled. The README was rewritten as the public project landing page.
 
 ### Validation

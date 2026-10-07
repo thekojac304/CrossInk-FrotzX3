@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "frotzx3_version": "0.9.0-beta.1",
-  "frotzx3_source_commit": "47108ed4676f984e681b080a4f119161f25c63b9",
-  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 39 overlay files + the five patched files. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
+  "frotzx3_source_commit": "752abbebd6c96498155d4295e8dd769c5742e443",
+  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 40 overlay files + the five patched files, including the FrotzX3 contiguous-memory guardrail. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
   "upstream": {
     "repository": "https://github.com/uxjulia/CrossInk.git",
     "commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
@@ -115,8 +115,8 @@
     },
     {
       "path": "lib/FrotzX3/src/fastmem.c",
-      "sha256": "d36716c91f589965e760c146191ebda5b8253fab9a30d6e989ca49b3194b8fdb",
-      "bytes": 36791
+      "sha256": "5e8699e07f6e51896eae4836e07b79a6328c25f682937677edd194f3d52cf78f",
+      "bytes": 38003
     },
     {
       "path": "lib/FrotzX3/src/files.c",
@@ -147,6 +147,11 @@
       "path": "lib/FrotzX3/src/FrotzX3.h",
       "sha256": "6873d117ee0ec54926ac23c60926b8436960345ac2001731980f470d33f36478",
       "bytes": 3347
+    },
+    {
+      "path": "lib/FrotzX3/src/FrotzX3MemGuard.h",
+      "sha256": "4a6b7add5630625cdb5874166b4441d20f52e0a0181dbe88ed86a5db786ae800",
+      "bytes": 1480
     },
     {
       "path": "lib/FrotzX3/src/FrotzX3Paths.h",

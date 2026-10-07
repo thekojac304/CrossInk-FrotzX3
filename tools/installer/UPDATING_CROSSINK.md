@@ -91,6 +91,10 @@ picker, Select and power behavior (Select must not trigger Sleep), T9 keyboard,
 suggestions, transcript paging, manual save/load, rewind, Adventure Log, exit and
 re-entry, resume. **Hardware results are authoritative.**
 
+Also measure the contiguous-memory budget and check it against the policy in
+[`MEMORY_BUDGET.md`](MEMORY_BUDGET.md) (reported largest block before Lost Pig's allocation
+at least 51,770 B). A base that misses it is not supported, even if every story happened to start.
+
 ## 8. Generate the new patch package
 
 Never overwrite the previous package. Use a new folder for each CrossInk base:
@@ -118,7 +122,8 @@ Until X3 hardware testing passes, mark the entry `"status": "build-tested"`,
 `"opt_in_only": true`, `"firmware_hardware_tested": false` and give it a `crossink_target`
 (for example `"1.6.1"`). `Install-FrotzX3.ps1` then builds it only with
 `-TargetCrossInkVersion 1.6.1`; the default run keeps choosing the newest entry that is not
-`opt_in_only`. Promote it (status `tested`, drop `opt_in_only`) only after step 7.
+`opt_in_only`. Promote it (status `tested`, drop `opt_in_only`) only after step 7, including the
+memory-budget check.
 
 ## 10. Publish
 
