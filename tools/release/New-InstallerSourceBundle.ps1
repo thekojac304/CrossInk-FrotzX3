@@ -48,7 +48,7 @@ $installerDir = Join-Path $PSScriptRoot '..\installer'
 . (Join-Path $installerDir 'FrotzX3.Common.ps1')
 
 function Fail([string]$Message) { throw $Message }
-function Git([string]$Dir, [string[]]$GitArgs) {
+function RunGit([string]$Dir, [string[]]$GitArgs) {
     $r = Invoke-FxGit -Dir $Dir -GitArgs $GitArgs
     if ($r.ExitCode -ne 0) { Fail "git $($GitArgs -join ' ') failed in ${Dir}:`n$($r.Output -join "`n")" }
     return $r.Output
@@ -59,8 +59,8 @@ $SourceTree = (Resolve-Path -LiteralPath $SourceTree).Path
 if (-not $OutputDir) { $OutputDir = Join-Path $repo 'dist-publish' }
 
 # 1. This repository (the installer and package) must be clean and its package intact ----------------
-if (Git $repo @('status', '--porcelain')) { Fail 'The FrotzX3 repository working tree is not clean; commit or stash first.' }
-$repoCommit = (Git $repo @('rev-parse', 'HEAD') | Select-Object -First 1).Trim()
+if (RunGit $repo @('status', '--porcelain')) { Fail 'The FrotzX3 repository working tree is not clean; commit or stash first.' }
+$repoCommit = (RunGit $repo @('rev-parse', 'HEAD') | Select-Object -First 1).Trim()
 $compat = Get-FxCompatibility
 $release = Select-FxRelease -Compat $compat -Version '' -Target ''
 $packageDir = Join-Path $repo ($release.patch_path -replace '/', '\')
@@ -71,16 +71,16 @@ $name = "FrotzX3-v$version-source-complete"
 $zipPath = Join-Path $OutputDir "$name.zip"
 
 # 2. The source tree must be exactly base + package ---------------------------------------------------
-$head = (Git $SourceTree @('rev-parse', 'HEAD') | Select-Object -First 1).Trim()
+$head = (RunGit $SourceTree @('rev-parse', 'HEAD') | Select-Object -First 1).Trim()
 if ($head -ne $manifest.upstream.commit) { Fail "SourceTree HEAD is $head, expected $($manifest.upstream.commit)." }
 Test-FxSubmoduleCommits -Dest $SourceTree -Manifest $manifest
-$subDirty = Git $SourceTree @('submodule', 'foreach', '--quiet', '--recursive', 'git status --porcelain')
+$subDirty = RunGit $SourceTree @('submodule', 'foreach', '--quiet', '--recursive', 'git status --porcelain')
 if ($subDirty) { Fail "A submodule is not clean:`n$($subDirty -join "`n")" }
 
 $expectedPaths = @{}
 foreach ($e in @($manifest.expected_results)) {
     $expectedPaths[$e.path] = 'M'
-    $blob = (Git $SourceTree @('hash-object', '--no-filters', ($e.path -replace '/', '\')) | Select-Object -First 1).Trim()
+    $blob = (RunGit $SourceTree @('hash-object', '--no-filters', ($e.path -replace '/', '\')) | Select-Object -First 1).Trim()
     if ($blob -ne $e.git_blob) { Fail "$($e.path) does not match the recorded result of the package." }
 }
 foreach ($o in @($manifest.overlay_files)) {
@@ -90,7 +90,7 @@ foreach ($o in @($manifest.overlay_files)) {
     if ((Get-FxSha256 $f) -ne $o.sha256) { Fail "Overlay file differs from the package: $($o.path)" }
 }
 # Overlay files are untracked; list individual files (not collapsed directories) and compare.
-foreach ($line in (Git $SourceTree @('status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none'))) {
+foreach ($line in (RunGit $SourceTree @('status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none'))) {
     if ($line.Length -lt 4) { continue }
     $code = $line.Substring(0, 2).Trim(); $path = $line.Substring(3).Trim('"')
     $kind = if ($code -eq '??') { '?' } else { 'M' }
@@ -105,9 +105,9 @@ $idx = Join-Path ([IO.Path]::GetTempPath()) ("fxidx-" + [Guid]::NewGuid().ToStri
 $treeHash = ''
 try {
     $env:GIT_INDEX_FILE = $idx
-    Git $SourceTree @('read-tree', 'HEAD') | Out-Null   # keeps submodules as gitlinks
-    Git $SourceTree (@('add', '--') + @($expectedPaths.Keys | Sort-Object)) | Out-Null
-    $treeHash = (Git $SourceTree @('write-tree') | Select-Object -First 1).Trim()
+    RunGit $SourceTree @('read-tree', 'HEAD') | Out-Null   # keeps submodules as gitlinks
+    RunGit $SourceTree (@('add', '--') + @($expectedPaths.Keys | Sort-Object)) | Out-Null
+    $treeHash = (RunGit $SourceTree @('write-tree') | Select-Object -First 1).Trim()
 } finally {
     Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $idx) { Remove-Item -LiteralPath $idx -Force }
@@ -115,10 +115,10 @@ try {
 
 # 3. Collect files: tracked (incl. submodules, from the working tree) + overlay ---------------------
 $rel = New-Object System.Collections.Generic.HashSet[string]
-foreach ($l in (Git $SourceTree @('ls-files', '--recurse-submodules'))) { if ($l) { [void]$rel.Add($l.Trim('"')) } }
+foreach ($l in (RunGit $SourceTree @('ls-files', '--recurse-submodules'))) { if ($l) { [void]$rel.Add($l.Trim('"')) } }
 foreach ($o in @($manifest.overlay_files)) { [void]$rel.Add($o.path) }
 $subs = @()
-foreach ($l in (Git $SourceTree @('submodule', 'status', '--recursive'))) {
+foreach ($l in (RunGit $SourceTree @('submodule', 'status', '--recursive'))) {
     if ($l -notmatch '^(.)([0-9a-f]{40}) (\S+)') { Fail "Unparseable submodule status: $l" }
     if ($Matches[1] -ne ' ') { Fail "Submodule $($Matches[3]) is not at its recorded commit." }
     $subs += @{ Path = $Matches[3]; Sha = $Matches[2] }
@@ -144,7 +144,7 @@ try {
     $toolPaths = @('tools/installer', 'tools/patches', 'tools/release', 'tools/tests', 'FROTZX3_INSTALLER_README.md')
     $toolPaths = @($toolPaths | Where-Object { Test-Path -LiteralPath (Join-Path $repo $_) })
     $tmpZip = Join-Path $stage 'tools.zip'
-    $a = Git $repo (@('archive', '--format=zip', '-o', $tmpZip, 'HEAD', '--') + $toolPaths)
+    $a = RunGit $repo (@('archive', '--format=zip', '-o', $tmpZip, 'HEAD', '--') + $toolPaths)
     $toolsDir = Join-Path $root 'frotzx3-build-tools'
     [IO.Compression.ZipFile]::ExtractToDirectory($tmpZip, $toolsDir)
     Remove-Item -LiteralPath $tmpZip
@@ -197,7 +197,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $root 'SOURCE_BUNDLE_MANIFEST.txt'), (($lines -join "`n") + "`n"), (New-Object Text.UTF8Encoding $false))
 
     # 6. Deterministic ZIP --------------------------------------------------------------------------------
-    $stamp = [DateTimeOffset]::FromUnixTimeSeconds([long](Git $repo @('log', '-1', '--format=%ct') | Select-Object -First 1).Trim())
+    $stamp = [DateTimeOffset]::FromUnixTimeSeconds([long](RunGit $repo @('log', '-1', '--format=%ct') | Select-Object -First 1).Trim())
     New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     $files = Get-ChildItem $root -Recurse -Force -File |
