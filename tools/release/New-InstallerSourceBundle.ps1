@@ -100,12 +100,13 @@ foreach ($line in (Git $SourceTree @('status', '--porcelain', '--untracked-files
 }
 Write-Host "Source tree verified: $head + package $($release.patch_path) (no other differences)"
 
-# Tree identity: hash of the exact source state (temporary index, nothing in the tree is changed).
+# Tree identity: git tree of base + package (temporary index; nothing in the tree is changed).
 $idx = Join-Path ([IO.Path]::GetTempPath()) ("fxidx-" + [Guid]::NewGuid().ToString('N'))
 $treeHash = ''
 try {
     $env:GIT_INDEX_FILE = $idx
-    Git $SourceTree @('add', '-A') | Out-Null
+    Git $SourceTree @('read-tree', 'HEAD') | Out-Null   # keeps submodules as gitlinks
+    Git $SourceTree (@('add', '--') + @($expectedPaths.Keys | Sort-Object)) | Out-Null
     $treeHash = (Git $SourceTree @('write-tree') | Select-Object -First 1).Trim()
 } finally {
     Remove-Item Env:GIT_INDEX_FILE -ErrorAction SilentlyContinue
