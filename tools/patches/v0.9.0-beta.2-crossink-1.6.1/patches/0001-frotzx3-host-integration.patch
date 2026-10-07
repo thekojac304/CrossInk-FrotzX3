@@ -182,7 +182,7 @@ index 336cf566b135cb822d979b33c929771910ef4cee..227a2b970726bec317d5aa284b8d362d
          onFileTransferOpen();
          break;
 diff --git a/src/main.cpp b/src/main.cpp
-index d0da1720493f6429961a1bad49d9f8912dbc1fc2..65cfd89edc6d5a016e453cde682476e92b49a6c1 100644
+index d0da1720493f6429961a1bad49d9f8912dbc1fc2..c1be0423ab8309228473933f24b4cc21e33c8439 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -357,9 +357,11 @@ constexpr uint32_t SILENT_READER_PAGE_BUILD_MAGIC = 0xC1EAB017;
@@ -200,3 +200,39 @@ index d0da1720493f6429961a1bad49d9f8912dbc1fc2..65cfd89edc6d5a016e453cde682476e9
  
  // How the device is coming back to life, resolved once at boot. Both resume
  // flows suppress the splash and leave the panel holding its pre-boot frame; a
+@@ -522,6 +524,19 @@ bool startGlobalSyncProgress(const bool networkBootReady, const uint8_t readerOr
+   return true;
+ }
+ 
++// How long the current (or just released) Power press has lasted. The generic
++// getHeldTime() starts at the first button of a run in which any button stays
++// held, so a fresh Power press that overlaps another held button can already be
++// past the long-press threshold on its first frame.
++unsigned long currentPowerPressHeldMs() {
++#ifdef SIMULATOR
++  // Simulator Power presses are injected in MappedInputManager, not HalGPIO.
++  return mappedInputManager.getHeldTime();
++#else
++  return gpio.getPowerButtonHeldTime();
++#endif
++}
++
+ CrossPointSettings::SHORT_PWRBTN getPowerButtonAction() {
+   static bool longPowerButtonHandled = false;
+ 
+@@ -531,13 +546,13 @@ CrossPointSettings::SHORT_PWRBTN getPowerButtonAction() {
+       return CrossPointSettings::SHORT_PWRBTN::IGNORE;
+     }
+ 
+-    return mappedInputManager.getHeldTime() < SETTINGS.getPowerButtonLongPressDuration()
++    return currentPowerPressHeldMs() < SETTINGS.getPowerButtonLongPressDuration()
+                ? static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.shortPwrBtn)
+                : static_cast<CrossPointSettings::SHORT_PWRBTN>(SETTINGS.longPwrBtn);
+   }
+ 
+   if (longPowerButtonHandled || !mappedInputManager.isPressed(MappedInputManager::Button::Power) ||
+-      mappedInputManager.getHeldTime() < SETTINGS.getPowerButtonLongPressDuration()) {
++      currentPowerPressHeldMs() < SETTINGS.getPowerButtonLongPressDuration()) {
+     return CrossPointSettings::SHORT_PWRBTN::IGNORE;
+   }
+ 

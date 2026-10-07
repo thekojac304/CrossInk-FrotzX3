@@ -8,6 +8,7 @@ class FrotzX3Activity final : public Activity {
       : Activity("FrotzX3", renderer, mappedInput) {}
 
   void onEnter() override;
+  void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
 

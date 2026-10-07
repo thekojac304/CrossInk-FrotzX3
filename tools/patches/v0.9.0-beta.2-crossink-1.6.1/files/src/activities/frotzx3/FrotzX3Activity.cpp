@@ -3738,6 +3738,67 @@ void armDeferredPickerAction(
 }
 
 
+/*
+ * SHARED SELECT / POWER BUTTON
+ *
+ * On the X3 the top Select button is the Power button. main.cpp
+ * reads it as a long Power press (Sleep after 400 ms) unless
+ * Power-release suppression is armed, and Frotz arms it only when
+ * a screen reads Confirm on the press frame. A press that lands
+ * while the interpreter is busy, or that is still held when Frotz
+ * exits, would otherwise reach that sleep handler.
+ */
+namespace {
+
+/*
+ * Runs when loop() returns. If this frame's Power press was not
+ * claimed as Select, claim it now through the same wasPressed(Confirm)
+ * path. It arms suppression only when Power acts as Select under the
+ * current settings, and does nothing for an already claimed press.
+ */
+struct UnclaimedSelectPressGuard {
+  MappedInputManager& input;
+
+  ~UnclaimedSelectPressGuard() {
+    if (!input.wasPressed(MappedInputManager::Button::Power) ||
+        input.isPowerReleaseSuppressed()) {
+      return;
+    }
+
+    (void)input.wasPressed(MappedInputManager::Button::Confirm);
+  }
+};
+
+/*
+ * Leaving Frotz with Select still held: consume its release so the
+ * next activity sees neither a Confirm release (Home would open the
+ * selected book) nor a Power release/hold (Sleep).
+ */
+void consumeHeldSelectUntilReleased(MappedInputManager& input) {
+  const bool confirmHeld =
+      input.isPhysicalPressed(MappedInputManager::Button::Confirm);
+  const bool powerHeld =
+      input.isPhysicalPressed(MappedInputManager::Button::Power);
+
+  if (confirmHeld) {
+    input.suppressNextConfirmRelease();
+  }
+
+  if (powerHeld) {
+    input.suppressNextPowerRelease();
+    input.suppressNextPowerConfirmRelease();
+  }
+}
+
+}  // namespace
+
+
+void FrotzX3Activity::onExit() {
+  consumeHeldSelectUntilReleased(mappedInput);
+  Activity::onExit();
+}
+
+
 void FrotzX3Activity::onEnter() {
 scanGames();
 migrateSaveLayout();
@@ -3848,18 +3909,23 @@ gFrotzLastError = "";
 
 void FrotzX3Activity::loop() {
 
+  const UnclaimedSelectPressGuard selectPressGuard{mappedInput};
+
   /*
    * GAME PICKER / STARTUP LAUNCH EXECUTION
    *
    * Never perform Frotz startup/restore while the top Select button
    * is still physically held. This is the same sleep-button safeguard
    * already used by manual saves, loads, rewind, and command submit.
+   *
+   * isPressed() reports Power and Power-as-Confirm as released once
+   * the press is claimed, so check the physical state instead.
    */
   if (gDeferredPickerAction !=
           DeferredPickerAction::None &&
-      !mappedInput.isPressed(
+      !mappedInput.isPhysicalPressed(
           MappedInputManager::Button::Confirm) &&
-      !mappedInput.isPressed(
+      !mappedInput.isPhysicalPressed(
           MappedInputManager::Button::Power)) {
 
     const DeferredPickerAction action =
@@ -3953,7 +4019,7 @@ void FrotzX3Activity::loop() {
              int recoverySlot = -1) {
 
         const bool usesPowerButton =
-            mappedInput.isPressed(
+            mappedInput.isPhysicalPressed(
                 MappedInputManager::Button::Power);
 
         if (usesPowerButton) {

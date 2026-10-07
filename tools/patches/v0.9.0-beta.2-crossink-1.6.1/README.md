@@ -38,17 +38,33 @@ Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.2` build.
 manifest.json                         versions, SHA-256 of every file, expected results
 patches/0001-frotzx3-host-integration.patch
                                       git patch: HomeActivity.cpp (menu entry + cover release), MappedInputManager.cpp,
-                                      main.cpp (C3 render stack 12,288 B), platformio.ini (two FrotzX3 lines + LOG_LEVEL=0),
+                                      main.cpp (C3 render stack 12,288 B; Power-specific long-press timer),
+                                      platformio.ini (two FrotzX3 lines + LOG_LEVEL=0),
                                       scripts/git_branch.py (Windows build fix, see below)
 files/                                FrotzX3-owned files, copied verbatim (overlay)
 ```
 
-The 40 overlay files are the v0.9.0-beta.1 package files, except the version strings (`FrotzX3.cpp`, `library.json`) and docs (`FROTZX3_README.md`, `FROTZX3_LICENSE.md`) updated for `0.9.0-beta.2`, and except `FrotzX3Activity.cpp`, which carries
-the failure-screen fix, and `fastmem.c` plus the new `FrotzX3MemGuard.h`, which add the contiguous-memory
+The 40 overlay files are the v0.9.0-beta.1 package files, except the version strings (`FrotzX3.cpp`, `library.json`) and docs (`FROTZX3_README.md`, `FROTZX3_LICENSE.md`) updated for `0.9.0-beta.2`, and except `FrotzX3Activity.cpp`/`.h`, which carry
+the failure-screen fix and the Select/Power input fixes below, and `fastmem.c` plus the new `FrotzX3MemGuard.h`, which add the contiguous-memory
 preflight (see [`tools/installer/MEMORY_BUDGET.md`](../../installer/MEMORY_BUDGET.md)). The preflight was
 added after the checklist above and was then hardware-validated on the X3 (Lost Pig, Zork and Varicella
 start normally; a forced-failure build refuses them cleanly with the FROTZ START FAILED screen). The host-integration edits were re-made against
 v1.6.1 (plus the cover release and 12 KiB render stack), and one build-tooling fix (`scripts/git_branch.py`, below); see [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
+
+## X3 shared Select/Power fix
+
+On the X3 the top Select button is the Power button. CrossInk's global Power handler in `main.cpp`
+classified a press as long (Sleep, 400 ms) with the SDK's generic `getHeldTime()`, which is shared by all
+buttons and starts at the first press of any run of held buttons. A fresh Select press made while another
+button was still held (e.g. Right held ~0.5 s, then Select) could start already past 400 ms and put the
+device to sleep. The patch classifies the global Power action with the Power-specific press timer
+(`getPowerButtonHeldTime()`; the simulator keeps `getHeldTime()`, as its Power presses do not go through
+`HalGPIO`). The 400 ms threshold and every action mapping are unchanged.
+
+`FrotzX3Activity` also waits for the physical Select/Power release before a deferred story launch,
+consumes the release of a Select/Confirm still held when Frotz exits (so Home does not open the last-read
+book), and claims a Select press that Frotz did not read on its press frame. Validated on the X3 with a diagnostics build
+(hardware log: generic held time 528 ms vs. Power press 2 ms did not sleep; a real Power hold slept at 403 ms).
 
 ## Windows build fix (`scripts/git_branch.py`)
 

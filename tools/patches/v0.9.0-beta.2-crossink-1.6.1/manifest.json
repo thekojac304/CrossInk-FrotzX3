@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "frotzx3_version": "0.9.0-beta.2",
-  "frotzx3_source_commit": "1ac427f6ec73a40b6b353c84d0941ab793377f8c",
-  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 40 overlay files + the five patched files, including the FrotzX3 contiguous-memory guardrail. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
+  "frotzx3_source_commit": "c401b0a6f8d8f1da055825a8f74a7ff8ac813b28",
+  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 40 overlay files + the five patched files, including the FrotzX3 contiguous-memory guardrail and the X3 shared Select/Power false-sleep fix. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
   "upstream": {
     "repository": "https://github.com/uxjulia/CrossInk.git",
     "commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
@@ -45,7 +45,7 @@
   "patches": [
     {
       "path": "patches/0001-frotzx3-host-integration.patch",
-      "sha256": "b99785adfa8512ccc3e22b20bf5d7cb89698a431d30b4ddcf552d65856d21e66",
+      "sha256": "03030ae0d24ce99a72a3267e00f921c367547cc25e2828e465880b37a380e4ce",
       "modifies": [
         "platformio.ini",
         "scripts/git_branch.py",
@@ -70,7 +70,7 @@
     },
     {
       "path": "src/main.cpp",
-      "git_blob": "65cfd89edc6d5a016e453cde682476e92b49a6c1"
+      "git_blob": "c1be0423ab8309228473933f24b4cc21e33c8439"
     },
     {
       "path": "src/MappedInputManager.cpp",
@@ -265,13 +265,13 @@
     },
     {
       "path": "src/activities/frotzx3/FrotzX3Activity.cpp",
-      "sha256": "71488aa5d7a1f8b389f980c8ac1716c7e9660737e37792847feab3c3b80f8354",
-      "bytes": 173575
+      "sha256": "61ffb2e39eda8fd14fff6056c6cb11f322b4b75ed4671ce1b506f7c334d883ef",
+      "bytes": 175565
     },
     {
       "path": "src/activities/frotzx3/FrotzX3Activity.h",
-      "sha256": "08ada1a46816e390042d719a86c39029d18cc4365c0038748b1c17e37704e8e0",
-      "bytes": 1628
+      "sha256": "10dd3a316d04daae552d4bf4111439c9eb9c45efd000bc7b8d8bc21b46c86097",
+      "bytes": 1654
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
