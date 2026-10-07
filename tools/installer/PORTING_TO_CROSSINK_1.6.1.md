@@ -279,3 +279,23 @@ Reconstruction with `Install-FrotzX3.ps1` (default target, fresh clone of v1.6.1
 (27.3%), flash 6,375,761 B (97.3%), 163,712 B free in the 6,553,600 B app slot, SHA-256
 `96ff34cb4d333f73a69fa888004056291bfd76858f4c5714e8752102604b8a1d`. The hardware-tested probe images were
 separate scratch builds (`__TIME__` strings make SHAs non-reproducible), so this SHA is not one of theirs.
+
+## Verification record, FrotzX3 0.9.0-beta.2 installer build (2026-10-06)
+
+The package was renamed `v0.9.0-beta.2-crossink-1.6.1` and regenerated from port commit
+`1ac427f6ec73a40b6b353c84d0941ab793377f8c` (= `752abbeb` plus version strings `0.9.0-beta.2` in
+`FrotzX3.cpp` / `library.json` and doc updates in `FROTZX3_README.md` / `FROTZX3_LICENSE.md`; the
+patch SHA-256 `b99785ad...` and every other overlay file are unchanged). The manifest now builds the clean
+release string `0.9.0-beta.2` instead of a test-only `-hwtest` string, so the firmware that is hardware-tested
+can be the firmware that is released.
+
+Fresh clone of the repository at `4e57b93b` into `C:\fxi\repo`, then the default run
+`Install-FrotzX3.ps1 -WorkDir C:\fxi\work -KeepWorkDir` (no target or version override): selected
+FrotzX3 0.9.0-beta.2 / CrossInk v1.6.1 `9914146e`, submodules verified, package verified (40 overlay files,
+1 patch), applied, every result matched. Source tree `27817af15190ef94b1bed446e15d4e235770322e`, identical
+to port commit `1ac427f`'s tree (submodules as gitlinks). Build: PASS, 6,389,856 B, RAM 89,360 B (27.3%),
+flash 6,375,721 B (97.3%), 163,744 B free in the 6,553,600 B app slot, version string `0.9.0-beta.2`,
+`espressif/mdns` 1.14.0, SHA-256 `ec5ace1a4caf29fa1cc9a302b5c9e3fcd23c0b8b119d999fd3cdb83f5753562b`.
+The installer-built firmware has not been flashed yet; see `compatibility.json`
+(`patch_installer_hardware_tested`) for its current status.
+
