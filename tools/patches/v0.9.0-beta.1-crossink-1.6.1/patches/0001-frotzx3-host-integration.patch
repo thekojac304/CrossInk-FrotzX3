@@ -106,7 +106,7 @@ index 7bebab0479ceed93bb0edac8db0981100469cd28..7db0a765c4f666710be7198377c741b4
  
    if (button == Button::Back && wasBackGesture()) {
 diff --git a/src/activities/home/HomeActivity.cpp b/src/activities/home/HomeActivity.cpp
-index 336cf566b135cb822d979b33c929771910ef4cee..d3a7309925c5cc61c8a290dfd2bbaf02dc6bb79a 100644
+index 336cf566b135cb822d979b33c929771910ef4cee..227a2b970726bec317d5aa284b8d362dca785a2e 100644
 --- a/src/activities/home/HomeActivity.cpp
 +++ b/src/activities/home/HomeActivity.cpp
 @@ -27,6 +27,7 @@
@@ -159,14 +159,44 @@ index 336cf566b135cb822d979b33c929771910ef4cee..d3a7309925c5cc61c8a290dfd2bbaf02
    if (!metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
      count += getVisibleRecentBookCount();
    } else if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
-@@ -1717,6 +1721,10 @@ void HomeActivity::loop() {
+@@ -1717,6 +1721,21 @@ void HomeActivity::loop() {
        case HomeMenuAction::Bookmarks:
          onSavedItemsOpen();
          break;
-+      case HomeMenuAction::InteractiveFiction:
-+        activityManager.pushActivity(
-+            std::make_unique<FrotzX3Activity>(renderer, mappedInput));
-+        break;  
++      case HomeMenuAction::InteractiveFiction: {
++        // Home stays on the activity stack under FrotzX3 but never draws while
++        // it is covered. Its ~16 KB cover snapshot can sit in the same heap
++        // region FrotzX3 needs for a large story's dynamic memory, so drop it
++        // first. invalidateCoverCache() is Home's existing reset (onExit's
++        // freeCoverBuffer() plus coverRendered=false), so render() rebuilds the
++        // cover when Home is shown again. The render lock keeps the render task
++        // out of restoreCoverBuffer() while the buffer is freed.
++        {
++          RenderLock lock;
++          invalidateCoverCache();
++        }
++        activityManager.pushActivity(std::make_unique<FrotzX3Activity>(renderer, mappedInput));
++        break;
++      }
        case HomeMenuAction::FileTransfer:
          onFileTransferOpen();
          break;
+diff --git a/src/main.cpp b/src/main.cpp
+index d0da1720493f6429961a1bad49d9f8912dbc1fc2..65cfd89edc6d5a016e453cde682476e92b49a6c1 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -357,9 +357,11 @@ constexpr uint32_t SILENT_READER_PAGE_BUILD_MAGIC = 0xC1EAB017;
+ constexpr uint32_t SILENT_READER_PAGE_BUILD_AUTO_TURN = 1U << 0;
+ constexpr uint32_t NETWORK_RENDER_TASK_STACK_BYTES = 8192;
+ // FreeType's anti-aliased rasterizer reserves a 16 KiB scratch pool on its
+-// caller's stack. Scalable fonts are S3-only, so leave C3's constrained reader
+-// stack unchanged and give S3 reader renders room for their normal call frames.
+-constexpr uint32_t READER_RENDER_TASK_STACK_BYTES = FREEINK_MCU_S3 ? 24576 : 16384;
++// caller's stack. Scalable fonts are S3-only, so C3 keeps a constrained reader
++// stack and S3 reader renders get room for their normal call frames.
++// C3 uses 12 KiB (measured peak use ~7.2 KiB) so the stack fits ordinary DRAM and
++// leaves the retention-RAM region free for FrotzX3's large dynamic-memory block.
++constexpr uint32_t READER_RENDER_TASK_STACK_BYTES = FREEINK_MCU_S3 ? 24576 : 12288;
+ 
+ // How the device is coming back to life, resolved once at boot. Both resume
+ // flows suppress the splash and leave the panel holding its pre-boot frame; a

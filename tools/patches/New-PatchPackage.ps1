@@ -42,7 +42,8 @@ param(
     [string]$PackageStatus = '',
     [string]$ReleaseVersion = '',
     [string]$SourceNote = '',
-    [string[]]$ExtraPatchFiles = @()
+    [string[]]$ExtraPatchFiles = @(),
+    [switch]$HardwareTested
 )
 
 $ErrorActionPreference = 'Stop'
@@ -228,7 +229,7 @@ if ($UpstreamTag) { $manifest.upstream.tag = $UpstreamTag }
 if ($PackageStatus) {
     $manifest.device = 'XTEINK X3'
     $manifest.package_status = $PackageStatus
-    $manifest.hardware_tested = $false
+    $manifest.hardware_tested = [bool]$HardwareTested
 }
 if ($nested.Count -gt 0) { $manifest.nested_submodules = $nested }
 $json = $manifest | ConvertTo-Json -Depth 8

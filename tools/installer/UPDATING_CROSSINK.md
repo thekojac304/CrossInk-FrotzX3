@@ -100,7 +100,7 @@ tools\patches\New-PatchPackage.ps1 -Version <new frotzx3 version> `
   -PackageName v<frotzx3 version>-crossink-<x.y.z> -RepoDir <port checkout> `
   -BaseCommit <crossink sha> -SourceCommit <port commit> -UpstreamTag v<x.y.z> `
   -PackageStatus build-tested -ReleaseVersion <test-only version string> `
-  [-ExtraPatchFiles scripts/git_branch.py]
+  [-ExtraPatchFiles scripts/git_branch.py,src/main.cpp] [-HardwareTested]
 ```
 
 Update `FROTZX3_DELTA.md` if the classification changed. Run

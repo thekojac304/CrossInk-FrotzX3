@@ -84,7 +84,7 @@ try {
     if ($release.status -ne 'tested') {
         Write-Host '   NOTE: this installer path has not been hardware-tested; treat the result as experimental.' -ForegroundColor Yellow
     }
-    if ($TargetCrossInkVersion) {
+    if ($TargetCrossInkVersion -and $release.status -ne 'tested') {
         Write-Host "   OPT-IN TARGET: CrossInk $TargetCrossInkVersion. Package status '$($release.status)': it compiles, but it has NOT been flashed or tested on an X3." -ForegroundColor Yellow
         Write-Host '   Do not distribute the resulting firmware as a FrotzX3 release.' -ForegroundColor Yellow
     }

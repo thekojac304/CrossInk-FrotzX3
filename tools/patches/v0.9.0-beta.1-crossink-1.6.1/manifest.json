@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "frotzx3_version": "0.9.0-beta.1",
-  "frotzx3_source_commit": "18349ee72c84b2c66cfe27947288176c8b321515",
-  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 39 overlay files + the four patched files. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
+  "frotzx3_source_commit": "47108ed4676f984e681b080a4f119161f25c63b9",
+  "frotzx3_source_note": "Commit in the (unpublished) porting checkout of official CrossInk v1.6.1 whose tree the package reconstructs: v1.6.1 + the 39 overlay files + the five patched files. It exists only to generate and verify the package; the package itself (patch + overlay) is the portable record. Not part of any pushed history.",
   "upstream": {
     "repository": "https://github.com/uxjulia/CrossInk.git",
     "commit": "9914146eeae7b46b300f475a16c32426fc02ec1f",
@@ -45,11 +45,12 @@
   "patches": [
     {
       "path": "patches/0001-frotzx3-host-integration.patch",
-      "sha256": "67519e982c418936bb2730201ee7a094e196a4fd98c9701a528881ffdb2fe563",
+      "sha256": "b99785adfa8512ccc3e22b20bf5d7cb89698a431d30b4ddcf552d65856d21e66",
       "modifies": [
         "platformio.ini",
         "scripts/git_branch.py",
         "src/activities/home/HomeActivity.cpp",
+        "src/main.cpp",
         "src/MappedInputManager.cpp"
       ]
     }
@@ -65,7 +66,11 @@
     },
     {
       "path": "src/activities/home/HomeActivity.cpp",
-      "git_blob": "d3a7309925c5cc61c8a290dfd2bbaf02dc6bb79a"
+      "git_blob": "227a2b970726bec317d5aa284b8d362dca785a2e"
+    },
+    {
+      "path": "src/main.cpp",
+      "git_blob": "65cfd89edc6d5a016e453cde682476e92b49a6c1"
     },
     {
       "path": "src/MappedInputManager.cpp",
@@ -255,8 +260,8 @@
     },
     {
       "path": "src/activities/frotzx3/FrotzX3Activity.cpp",
-      "sha256": "d5694e2e5b0cadf8d73c3dcb2644cbc1e3eee19857d6c3f4a8b7d2c7580ffb3f",
-      "bytes": 173472
+      "sha256": "71488aa5d7a1f8b389f980c8ac1716c7e9660737e37792847feab3c3b80f8354",
+      "bytes": 173575
     },
     {
       "path": "src/activities/frotzx3/FrotzX3Activity.h",
@@ -270,8 +275,8 @@
     }
   ],
   "device": "XTEINK X3",
-  "package_status": "build-tested",
-  "hardware_tested": false,
+  "package_status": "tested",
+  "hardware_tested": true,
   "nested_submodules": [
     {
       "path": "freeink-sdk/libs/assets/Icons/lucide",

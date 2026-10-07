@@ -2,11 +2,22 @@
 
 Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.1` build.
 
-> **Status: build-tested, NOT hardware-tested.** This package reconstructs from official
-> source and compiles. No firmware built from it has been flashed to an XTEINK X3. It is
-> opt-in only (`Install-FrotzX3.ps1 -TargetCrossInkVersion 1.6.1`) and is not the public
-> default. The hardware-tested artifact is still the v0.9.0-beta.1 release firmware built
-> on the old CrossInk base (`../v0.9.0-beta.1/`).
+> **Status: hardware-validated on an XTEINK X3 (`compatibility.json` status `tested`).**
+> The first hardware test (`FrotzX3-v0.9.0-beta.1-crossink-1.6.1-hwtest.bin`, SHA-256
+> `913dcdd47d7471404249a4056e13c47932a7251d0958262370b5ba67ea7f3dd0`) failed on large stories.
+> **Root cause:** Home's ~16 KB cover cache sometimes spilled into the retention RAM that Lost Pig's
+> 42,554 B contiguous dynamic-memory block needs (the 16,384 B C3 render stack was a second consumer).
+> **Permanent fix:** release the Home cover (`invalidateCoverCache()` under `RenderLock`) before
+> pushing FrotzX3, a 12,288 B (was 16,384 B) C3 render stack in `src/main.cpp`, and a failure-screen
+> title/error overprint fix. **Measured on an X3:** Lost Pig allocator headroom about 19 KB over its
+> rounded block (~19,356 B; retention free block ~62,364 B), lowest render-stack high-water mark
+> 5,048 B remaining (peak use ~7,240 B).
+> The cleaned final build (`...-crossink-1.6.1-final-hwtest.bin`, SHA-256
+> `1e63d288ea94800cb9b1662a05fde7a701d8bb70c580865c8a29f5752ecd685e`) passed the full hardware
+> checklist with no regressions, and this package reproduces its source exactly.
+> **Validated for CrossInk v1.6.1 only; future CrossInk releases still require explicit hardware
+> validation before being marked supported.** Details:
+> [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
 
 | | |
 | --- | --- |
@@ -18,21 +29,22 @@ Turns official CrossInk **v1.6.1** into a FrotzX3 `0.9.0-beta.1` build.
 | Required submodules | `freeink-sdk` @ `699370183fa3a0e33c9cb83a36f701bbb6022095`, `assets/tabler-icons` @ `8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc`; nested `freeink-sdk/libs/assets/Icons/lucide` @ `c81680e066f45b640743ca78ae36cdedda3f0318` |
 | `espressif/mdns` | pinned to `1.14.0` by `scripts/pin_idf_components.py` (overlay file), listed as a `pre:` extra script by the patch; the installer fails the build if another version resolves |
 | Release logging | `[env:default]` is patched to `-DLOG_LEVEL=0` (ERR only; `ENABLE_SERIAL_LOG`, serial setup and the crash-report ring buffer unchanged). Image 6,389,616 B, RAM 89,488 B vs. 6,406,752 B at `LOG_LEVEL=1`; see `tools/release/README.md` |
-| Release version env | `CROSSINK_RELEASE_VERSION=0.9.0-beta.1-ci161-hwtest` (test-only string so the firmware cannot be mistaken for a release; this is the hardware-test build), `CROSSINK_RC_HASH` unset |
+| Release version env | `CROSSINK_RELEASE_VERSION=0.9.0-beta.1-ci161-hwtest` (test-only string so the firmware cannot be mistaken for a release), `CROSSINK_RC_HASH` unset |
 
 ## Contents
 
 ```text
 manifest.json                         versions, SHA-256 of every file, expected results
 patches/0001-frotzx3-host-integration.patch
-                                      git patch: HomeActivity.cpp, MappedInputManager.cpp, platformio.ini (two FrotzX3 lines + LOG_LEVEL=0),
+                                      git patch: HomeActivity.cpp (menu entry + cover release), MappedInputManager.cpp,
+                                      main.cpp (C3 render stack 12,288 B), platformio.ini (two FrotzX3 lines + LOG_LEVEL=0),
                                       scripts/git_branch.py (Windows build fix, see below)
 files/                                FrotzX3-owned files, copied verbatim (overlay)
 ```
 
-The 39 overlay files are byte-identical to the v0.9.0-beta.1 package: **no FrotzX3-owned
-file changed for this port.** The three host-integration edits were re-made against
-v1.6.1, plus one build-tooling fix (`scripts/git_branch.py`, below); see [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
+The 39 overlay files are the v0.9.0-beta.1 package files, except `FrotzX3Activity.cpp`, which carries
+the failure-screen fix. The host-integration edits were re-made against
+v1.6.1 (plus the cover release and 12 KiB render stack), and one build-tooling fix (`scripts/git_branch.py`, below); see [`tools/installer/PORTING_TO_CROSSINK_1.6.1.md`](../../installer/PORTING_TO_CROSSINK_1.6.1.md).
 
 ## Windows build fix (`scripts/git_branch.py`)
 
@@ -82,8 +94,8 @@ tools\patches\New-PatchPackage.ps1 -Version 0.9.0-beta.1 `
   -UpstreamTag v1.6.1 -PackageStatus build-tested -ReleaseVersion 0.9.0-beta.1-ci161-hwtest
 ```
 
-## Promoting this package
+## Support policy
 
-Do not drop `opt_in_only` in `compatibility.json`, rename the version string, or call it
-supported until the X3 hardware checklist in `tools/installer/UPDATING_CROSSINK.md` has
-been run on firmware built from this package.
+This package is promoted (`status: tested`, no `opt_in_only`) for CrossInk v1.6.1 `9914146e` only. Do not
+reuse it for another CrossInk commit: every new CrossInk release needs its own port and its own X3 hardware
+checklist (`tools/installer/UPDATING_CROSSINK.md`) before it is marked supported.

@@ -8542,10 +8542,11 @@ drawWrappedTextPage(
         true,
         EpdFontFamily::BOLD);
 
+    /* The title is drawn at ROOM_TITLE_Y == BODY_Y; start the reason one line lower. */
     drawWrappedText(
         renderer,
         LEFT_MARGIN,
-        BODY_Y,
+        BODY_Y + LINE_HEIGHT,
         gFrotzLastError,
         MAX_LINE_CHARS,
         8);

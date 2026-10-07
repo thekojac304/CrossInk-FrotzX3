@@ -46,15 +46,17 @@ Useful options:
 | `-WorkDir <path>` | Use this (new) folder. Keep it short, e.g. `C:\fx3`; very long paths can break the ESP-IDF build on Windows. |
 | `-OutputDir <path>` | Where the firmware and log go (default `dist-installer\`). |
 | `-FrotzX3Version <v>` | Choose a release from `compatibility.json` (default: newest). |
-| `-TargetCrossInkVersion <v>` | Opt in to a build-tested, **not hardware-tested** port to a non-default CrossInk release (currently `1.6.1`). Exact match against `crossink_target` in `compatibility.json`; never selected unless you pass it. |
+| `-TargetCrossInkVersion <v>` | Select a package by exact `crossink_target` in `compatibility.json` (for example `1.6.1`); the nearest version is never substituted. |
 
-## Experimental target: CrossInk v1.6.1
+## Hardware-validated target: CrossInk v1.6.1
 
-`compatibility.json` also lists a port to official CrossInk **v1.6.1**
-(`tools/patches/v0.9.0-beta.1-crossink-1.6.1/`). It is marked `build-tested`,
-`opt_in_only`, and `firmware_hardware_tested: false`: it reconstructs and compiles, but no
-firmware from it has been flashed to an X3. The default run above is unchanged and still
-builds the old, hardware-tested base. To build the port deliberately:
+`compatibility.json` lists a package for official CrossInk **v1.6.1**
+(`tools/patches/v0.9.0-beta.1-crossink-1.6.1/`), status `tested` and no longer `opt_in_only`: the
+firmware built from this source passed XTEINK X3 hardware validation (see
+`PORTING_TO_CROSSINK_1.6.1.md`). Firmware produced by the installer itself has not been flashed
+(`patch_installer_hardware_tested: false`). Because the entry is newest and no longer opt-in, a default run now
+selects it. Future CrossInk releases need their own hardware validation before being marked supported.
+To select it explicitly:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\installer\Install-FrotzX3.ps1 -TargetCrossInkVersion 1.6.1
